@@ -1,0 +1,152 @@
+package templates
+
+import (
+	"testing"
+)
+
+type testItem struct {
+	ID        string `json:"id"`
+	Title     string `json:"title"`
+	Content   string `json:"content"`
+	Author    string `json:"author"`
+	CreatedAt string `json:"created_at"`
+}
+
+type testItemSSR struct {
+	ID        string `json:"id"`
+	Title     string `json:"title"`
+	Content   string `json:"content"`
+	Author    string `json:"author"`
+	CreatedAt string `json:"created_at"`
+}
+
+func (t testItemSSR) SkeletonFields() map[string]string {
+	return map[string]string{
+		"id":         t.ID,
+		"title":      t.Title,
+		"content":    t.Content,
+		"author":     t.Author,
+		"created_at": t.CreatedAt,
+	}
+}
+
+func TestRenderSkeleton_WithSSRData(t *testing.T) {
+	item := testItemSSR{ID: "1", Title: "Hello", Content: "World", Author: "Alice", CreatedAt: "2024-01-15T10:30:00Z"}
+
+	// Verify SSRData interface works — use interface{} conversion
+	var iface interface{} = item
+	if ssr, ok := iface.(SSRData); !ok {
+		t.Error("expected testItemSSR to implement SSRData")
+	} else {
+		fields := ssr.SkeletonFields()
+		if fields["id"] != "1" {
+			t.Errorf("expected id '1', got '%s'", fields["id"])
+		}
+	}
+}
+
+func TestStructToMap_BasicStruct(t *testing.T) {
+	item := testItem{ID: "1", Title: "Hello", Author: "Alice"}
+	m := structToMap(item)
+
+	if m["id"] != "1" {
+		t.Errorf("expected '1', got %v", m["id"])
+	}
+	if m["title"] != "Hello" {
+		t.Errorf("expected 'Hello', got %v", m["title"])
+	}
+	if m["author"] != "Alice" {
+		t.Errorf("expected 'Alice', got %v", m["author"])
+	}
+}
+
+func TestStructToMap_Pointer(t *testing.T) {
+	item := &testItem{ID: "2", Title: "World"}
+	m := structToMap(item)
+
+	if m["id"] != "2" {
+		t.Errorf("expected '2', got %v", m["id"])
+	}
+}
+
+func TestStructToMap_JSONTags(t *testing.T) {
+	item := testItem{ID: "3"}
+	m := structToMap(item)
+
+	// Should use json tag as key, not lowercase field name
+	if _, ok := m["id"]; !ok {
+		t.Error("expected 'id' key from json tag")
+	}
+}
+
+func TestStructToMap_NonStruct(t *testing.T) {
+	m := structToMap("not a struct")
+	if m == nil {
+		t.Fatal("expected non-nil map for non-struct")
+	}
+	if _, ok := m["_value"]; !ok {
+		t.Error("expected '_value' key for non-struct fallback")
+	}
+}
+
+func TestGetStr_NilMap(t *testing.T) {
+	result := getStr(nil, "key")
+	if result != "" {
+		t.Errorf("expected empty string for nil map, got '%s'", result)
+	}
+}
+
+func TestGetStr_StringValue(t *testing.T) {
+	m := map[string]interface{}{"key": "hello"}
+	result := getStr(m, "key")
+	if result != "hello" {
+		t.Errorf("expected 'hello', got '%s'", result)
+	}
+}
+
+func TestGetStr_NilValue(t *testing.T) {
+	m := map[string]interface{}{"key": nil}
+	result := getStr(m, "key")
+	if result != "" {
+		t.Errorf("expected empty string for nil value, got '%s'", result)
+	}
+}
+
+func TestTruncate_Short(t *testing.T) {
+	if result := truncate("hi", 10); result != "hi" {
+		t.Errorf("expected 'hi', got '%s'", result)
+	}
+}
+
+func TestTruncate_Long(t *testing.T) {
+	result := truncate("hello world", 5)
+	if result != "hello..." {
+		t.Errorf("expected 'hello...', got '%s'", result)
+	}
+}
+
+func TestTruncate_Exact(t *testing.T) {
+	if result := truncate("hello", 5); result != "hello" {
+		t.Errorf("expected 'hello', got '%s'", result)
+	}
+}
+
+func TestFormatDate_Valid(t *testing.T) {
+	result := formatDate("2024-01-15T10:30:00Z")
+	if result == "" {
+		t.Error("expected formatted date, got empty")
+	}
+}
+
+func TestFormatDate_Empty(t *testing.T) {
+	if result := formatDate(""); result != "" {
+		t.Errorf("expected empty, got '%s'", result)
+	}
+}
+
+func TestFormatDate_Invalid(t *testing.T) {
+	result := formatDate("not-a-date")
+	if result != "not-a-date" {
+		t.Errorf("expected original string for invalid date, got '%s'", result)
+	}
+}

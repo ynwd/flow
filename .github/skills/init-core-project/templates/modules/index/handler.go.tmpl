@@ -1,0 +1,41 @@
+package index
+
+import (
+	"bytes"
+	"embed"
+	"html/template"
+	"net/http"
+	"time"
+
+	"github.com/ynwd/flow/core/templates"
+)
+
+//go:embed templates/*.html
+var templatesFS embed.FS
+
+type Handler struct{}
+
+func NewHandler() *Handler {
+	return &Handler{}
+}
+
+func (h *Handler) Page(w http.ResponseWriter, r *http.Request) {
+	// Render skeleton HTML for SSR (fast first paint before React hydrates)
+	skeletonTmpl, err := template.ParseFS(templatesFS, "templates/skeleton.html")
+	if err != nil {
+		http.Error(w, "skeleton template error: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	var skeletonBuf bytes.Buffer
+	if err := skeletonTmpl.Execute(&skeletonBuf, map[string]interface{}{"Year": time.Now().Year()}); err != nil {
+		http.Error(w, "skeleton exec error: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Render shell template with skeleton injected as InitialHTML
+	tmplData := map[string]interface{}{
+		"Title":       "Flow",
+		"InitialHTML": skeletonBuf.String(),
+	}
+	templates.RenderEmpty(w, templatesFS, "templates/shell.html", tmplData)
+}

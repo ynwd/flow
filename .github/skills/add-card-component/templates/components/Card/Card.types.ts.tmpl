@@ -1,0 +1,83 @@
+import { ReactNode } from 'react';
+
+// ============================================
+// Card Container
+// ============================================
+
+export type CardVariant = 'default' | 'modal' | 'panel';
+
+export interface CardProps {
+  variant?: CardVariant;
+  children: ReactNode;
+  className?: string;
+}
+
+// ============================================
+// Card.Header
+// ============================================
+
+export interface CardProgress {
+  /** Current step (1-indexed) */
+  current: number;
+  /** Total number of steps */
+  total: number;
+}
+
+export interface CardHeaderProps {
+  /** Title text displayed in header */
+  title: string;
+  /** Close button click handler. If provided, shows close button (X) */
+  onClose?: () => void;
+  /** Progress bar config. Omit to hide progress bar entirely */
+  progress?: CardProgress;
+  /** Optional action button(s) on the right side */
+  action?: ReactNode;
+  /** Additional CSS classes */
+  className?: string;
+}
+
+// ============================================
+// Card.Content
+// ============================================
+
+export type CardContentPadding = 'none' | 'sm' | 'md' | 'lg';
+
+export interface CardContentProps {
+  children: ReactNode;
+  /** Content padding size */
+  padding?: CardContentPadding;
+  /** Enable vertical scrolling for overflow content */
+  scrollable?: boolean;
+  /** Maximum height when scrollable (e.g., '400px', '50vh') */
+  maxHeight?: string;
+  /** Additional CSS classes */
+  className?: string;
+}
+
+// ============================================
+// Card.Footer
+// ============================================
+
+export interface CardFooterButton {
+  /** Button label text */
+  label: string;
+  /** Click handler */
+  onClick: () => void;
+  /** Button variant */
+  variant?: 'primary' | 'secondary';
+  /** Disable the button */
+  disabled?: boolean;
+}
+
+export interface CardFooterProps {
+  /** Previous button config. Omit to hide */
+  prevButton?: CardFooterButton;
+  /** Next/Submit button config. Omit to hide */
+  nextButton?: CardFooterButton;
+  /** Step indicator config. Omit to hide counter */
+  stepIndicator?: CardProgress;
+  /** Additional CSS classes */
+  className?: string;
+  /** Custom content to render in center (overrides stepIndicator) */
+  centerContent?: ReactNode;
+}

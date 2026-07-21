@@ -1,0 +1,20 @@
+package middlewares
+
+import (
+	"io/fs"
+	"net/http"
+
+	"github.com/ynwd/flow/core/templates"
+)
+
+// RenderSSR is a convenience wrapper around templates.RenderSSR.
+// Deprecated: use templates.RenderSSR directly.
+func RenderSSR(w http.ResponseWriter, tplFS fs.FS, pattern string, templateData map[string]interface{}, initialData interface{}) {
+	templates.RenderSSR(w, tplFS, pattern, "", templateData, initialData)
+}
+
+// RenderEmpty is a convenience wrapper around templates.RenderEmpty.
+// Deprecated: use templates.RenderEmpty directly.
+func RenderEmpty(w http.ResponseWriter, tplFS fs.FS, pattern string, templateData map[string]interface{}) {
+	templates.RenderEmpty(w, tplFS, pattern, templateData)
+}

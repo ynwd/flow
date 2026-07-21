@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{.Title}}</title>
+<link rel="stylesheet" href="/static/css/app.min.css">
+<style>
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+body{opacity:0;animation:fadeIn .35s ease .1s forwards}
+@keyframes fadeIn{to{opacity:1}}
+@keyframes slideUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+@keyframes dotPulse{0%,100%{opacity:.4;transform:scale(1)}50%{opacity:1;transform:scale(1.35)}}
+@keyframes orbDrift{0%,100%{transform:translate(0,0)scale(1)}25%{transform:translate(30px,-20px)scale(1.05)}50%{transform:translate(-20px,30px)scale(.95)}75%{transform:translate(20px,20px)scale(1.02)}}
+
+.anim-up{animation:slideUp .5s ease both}
+.d1{animation-delay:.06s}.d2{animation-delay:.14s}.d3{animation-delay:.24s}.d4{animation-delay:.34s}
+
+.gradient-text{background:linear-gradient(135deg,#6366f1,#a855f7,#ec4899);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.light .gradient-text{background:linear-gradient(135deg,#4f46e5,#9333ea,#db2777);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+
+.glass-card{background:var(--glass-bg,rgba(255,255,255,.03));border:1px solid var(--glass-border,rgba(255,255,255,.06))}
+.light .glass-card{background:var(--glass-bg,rgba(255,255,255,.7));border:1px solid var(--glass-border,rgba(0,0,0,.06))}
+
+.bg-glow{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden}
+.bg-glow::before{content:'';position:absolute;width:500px;height:500px;top:-120px;right:-100px;background:radial-gradient(circle,rgba(99,102,241,.12),transparent 70%);border-radius:50%;animation:orbDrift 12s ease-in-out infinite}
+.bg-glow::after{content:'';position:absolute;width:400px;height:400px;bottom:-100px;left:-80px;background:radial-gradient(circle,rgba(168,85,247,.1),transparent 70%);border-radius:50%;animation:orbDrift 10s ease-in-out infinite reverse}
+.light .bg-glow::before{background:radial-gradient(circle,rgba(99,102,241,.07),transparent 70%)}
+.light .bg-glow::after{background:radial-gradient(circle,rgba(168,85,247,.06),transparent 70%)}
+
+.bg-grid{position:fixed;inset:0;pointer-events:none;z-index:0}
+.bg-grid::before{content:'';position:absolute;inset:0;background-image:
+  linear-gradient(rgba(255,255,255,.015) 1px,transparent 1px),
+  linear-gradient(90deg,rgba(255,255,255,.015) 1px,transparent 1px);
+  background-size:48px 48px;mask-image:radial-gradient(ellipse 60% 40% at 50% 50%,#000 20%,transparent 70%)}
+.light .bg-grid::before{background-image:
+  linear-gradient(rgba(0,0,0,.03) 1px,transparent 1px),
+  linear-gradient(90deg,rgba(0,0,0,.03) 1px,transparent 1px)}
+
+.bg-orb{position:fixed;pointer-events:none;z-index:0;border-radius:50%;filter:blur(80px)}
+.bg-orb-1{width:300px;height:300px;top:10%;right:-60px;background:#6366f1;opacity:.06}
+.bg-orb-2{width:200px;height:200px;bottom:15%;left:-40px;background:#a855f7;opacity:.05}
+.light .bg-orb-1{opacity:.035}.light .bg-orb-2{opacity:.03}
+
+.status-dot{width:7px;height:7px;border-radius:50%;background:#22c55e;box-shadow:0 0 10px rgba(34,197,94,.5);animation:dotPulse 2s ease-in-out infinite}
+</style>
+<script>
+(function(){try{var t=localStorage.getItem("theme")||"dark",e=document.documentElement;e.className=t==="light"?"light":"dark"}catch(e){}})();
+</script>
+</head>
+<body class="min-h-dvh flex flex-col bg-bg-primary text-text-primary">
+
+<div class="bg-glow" aria-hidden="true"></div>
+<div class="bg-grid" aria-hidden="true"></div>
+<div class="bg-orb bg-orb-1" aria-hidden="true"></div>
+<div class="bg-orb bg-orb-2" aria-hidden="true"></div>
+
+<div id="index-root">{{if .InitialHTML}}{{.InitialHTML}}{{end}}</div>
+
+{{if .InitialDataJSON}}
+<script id="index-initial-data" type="application/json">{{.InitialDataJSON}}</script>
+<script>(function(){var e=document.getElementById("index-initial-data");window.__INITIAL_DATA__=JSON.parse(e.textContent);e.remove()})();</script>
+{{end}}
+
+<script type="module" src="/static/index/dist/index.js"></script>
+</body>
+</html>

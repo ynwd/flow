@@ -1,0 +1,40 @@
+package router
+
+import (
+	"net/http"
+
+	"github.com/ynwd/flow/core/middlewares"
+)
+
+// middlewareForRoute returns the middleware chain for a given route.
+// Returns nil if no middleware is needed (public + no rate limit).
+func middlewareForRoute(r Route) func(http.Handler) http.Handler {
+	var chain []func(http.Handler) http.Handler
+
+	// Access middleware
+	switch r.Access {
+	case AccessSameOrigin:
+		chain = append(chain, middlewares.SameOrigin)
+	case AccessPrivate:
+		chain = append(chain, middlewares.Private)
+	}
+
+	// Rate limit middleware (applied after access check)
+	if r.RateLimit != nil {
+		if rl := middlewares.RateLimit(r.RateLimit.RequestsPerSecond); rl != nil {
+			chain = append(chain, rl)
+		}
+	}
+
+	if len(chain) == 0 {
+		return nil
+	}
+
+	// Compose chain: first in chain = outermost
+	return func(next http.Handler) http.Handler {
+		for i := len(chain) - 1; i >= 0; i-- {
+			next = chain[i](next)
+		}
+		return next
+	}
+}

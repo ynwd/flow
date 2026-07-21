@@ -1,0 +1,38 @@
+package middlewares
+
+import (
+	"context"
+	"net/http"
+	"strings"
+)
+
+// contextKey prevents collisions in context.WithValue.
+type contextKey string
+
+// UserIDKey is the context key for the authenticated user's ID.
+const UserIDKey contextKey = "user_id"
+
+// Private checks for a valid Bearer token.
+// Override this to implement custom auth (JWT, session, etc.).
+var Private = defaultPrivate
+
+// defaultPrivate checks for a Bearer token in the Authorization header.
+func defaultPrivate(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		auth := r.Header.Get("Authorization")
+		if auth == "" {
+			http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
+			return
+		}
+
+		token, ok := strings.CutPrefix(auth, "Bearer ")
+		if !ok || token == "" {
+			http.Error(w, `{"error":"invalid authorization format"}`, http.StatusUnauthorized)
+			return
+		}
+
+		// TODO: replace with real token validation (JWT, session, etc.)
+		ctx := context.WithValue(r.Context(), UserIDKey, token)
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
