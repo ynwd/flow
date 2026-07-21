@@ -1,0 +1,38 @@
+package middlewares
+
+import (
+	"net/http"
+	"strings"
+)
+
+// SameOrigin checks that the request comes from the same origin.
+// Override this for custom origin validation.
+var SameOrigin = defaultSameOrigin
+
+// defaultSameOrigin checks that Origin or Referer matches the server's origin.
+func defaultSameOrigin(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		origin := r.Header.Get("Origin")
+
+		// If no Origin, fall back to Referer
+		if origin == "" {
+			referer := r.Header.Get("Referer")
+			if referer == "" {
+				http.Error(w, `{"error":"forbidden: no origin"}`, http.StatusForbidden)
+				return
+			}
+			if !strings.HasPrefix(referer, "http://") && !strings.HasPrefix(referer, "https://") {
+				http.Error(w, `{"error":"forbidden: invalid referer"}`, http.StatusForbidden)
+				return
+			}
+			origin = referer
+		}
+
+		if strings.Contains(origin, r.Host) {
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		http.Error(w, `{"error":"forbidden: cross-origin"}`, http.StatusForbidden)
+	})
+}

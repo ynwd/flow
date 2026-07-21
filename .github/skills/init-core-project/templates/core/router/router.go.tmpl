@@ -1,0 +1,175 @@
+package router
+
+import (
+	"bytes"
+	"fmt"
+	"html/template"
+	"net/http"
+	"os"
+	"path/filepath"
+	"strings"
+	"sync"
+
+	"github.com/ynwd/flow/core/templates"
+)
+
+// AccessLevel defines who can access a route.
+type AccessLevel string
+
+const (
+	// AccessPublic — accessible without any authentication.
+	AccessPublic AccessLevel = "public"
+	// AccessPrivate — requires a valid Bearer token (logged-in user).
+	AccessPrivate AccessLevel = "private"
+	// AccessSameOrigin — only accessible from browser requests on the same origin
+	// (checks Origin/Referer header). Use for FE-only API calls.
+	AccessSameOrigin AccessLevel = "same_origin"
+)
+
+// Route describes a single HTTP route registered by a module.
+type Route struct {
+	Method      string
+	Path        string
+	Handler     http.HandlerFunc
+	Description string
+	Access      AccessLevel      // public, private, or same_origin (default: private)
+	RateLimit   *RateLimitConfig // nil = no rate limit
+	SSR         bool             // true → server-side render with data injection (for SEO/public pages)
+}
+
+// RateLimitConfig configures rate limiting for a route.
+// RequestsPerSecond is the max sustained requests per second.
+// Set to nil on a Route to disable rate limiting.
+type RateLimitConfig struct {
+	RequestsPerSecond float64
+}
+
+// Module is the interface every feature module must implement to register its routes.
+type Module interface {
+	Name() string
+	Routes() []Route
+}
+
+var (
+	modules = make(map[string]Module)
+	mu      sync.RWMutex
+)
+
+// RegisterModule registers a module so its routes are mounted by BuildRouter.
+func RegisterModule(m Module) {
+	mu.Lock()
+	defer mu.Unlock()
+	modules[m.Name()] = m
+}
+
+// GetModules returns a copy of all registered modules.
+func GetModules() map[string]Module {
+	mu.RLock()
+	defer mu.RUnlock()
+	copied := make(map[string]Module, len(modules))
+	for k, v := range modules {
+		copied[k] = v
+	}
+	return copied
+}
+
+// cachedFileServer wraps http.StripPrefix + http.FileServer with Cache-Control and
+// Content-Type headers for aggressive caching of fingerprinted assets.
+func cachedFileServer(dir string, _ string) http.Handler {
+	fs := http.FileServer(http.Dir(dir))
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Fix MIME type for CSS files
+		if filepath.Ext(r.URL.Path) == ".css" {
+			w.Header().Set("Content-Type", "text/css; charset=utf-8")
+		}
+		// Aggressive cache for fingerprinted assets; short cache for everything else
+		maxAge := "3600"
+		if strings.HasPrefix(r.URL.Path, "/static/dist/") || strings.HasPrefix(r.URL.Path, "/static/vendor/") {
+			maxAge = "31536000"
+		}
+		w.Header().Set("Cache-Control", fmt.Sprintf("public, max-age=%s, immutable", maxAge))
+		http.StripPrefix("/static/", fs).ServeHTTP(w, r)
+	})
+}
+func BuildRouter(mux *http.ServeMux) {
+	mu.Lock()
+	defer mu.Unlock()
+
+	exists := func(path string) bool {
+		_, err := os.Stat(path)
+		return err == nil
+	}
+
+	// Mount static/ directory — root static/ (build output) takes priority, fallback core/static/
+	switch {
+	case exists("static"):
+		mux.Handle("/static/", cachedFileServer("static", "31536000"))
+	case exists("core/static"):
+		mux.Handle("/static/", cachedFileServer("core/static", "31536000"))
+	}
+
+	// Default: redirect / to first registered module's public page route, or show landing page
+	mux.HandleFunc("GET /{$}", func(w http.ResponseWriter, req *http.Request) {
+		if len(modules) > 0 {
+			// Check if index module is registered — show its landing page
+			if indexMod, ok := modules["index"]; ok {
+				for _, r := range indexMod.Routes() {
+					if r.Method == "GET" {
+						r.Handler(w, req)
+						return
+					}
+				}
+			}
+
+			// Redirect to first registered module's public page route (excluding index)
+			for name, mod := range modules {
+				if name == "index" {
+					continue
+				}
+				for _, r := range mod.Routes() {
+					if r.Method == "GET" && r.Description != "" && r.Access == AccessPublic {
+						http.Redirect(w, req, r.Path, http.StatusFound)
+						return
+					}
+				}
+			}
+		}
+
+		// No modules registered — show landing page
+		tmpl, err := template.ParseFS(templates.FS, "landing.html")
+		if err != nil {
+			http.Error(w, "landing page error: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		var buf bytes.Buffer
+		if err := tmpl.Execute(&buf, map[string]interface{}{"Title": "Flow"}); err != nil {
+			http.Error(w, "landing page exec error: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		//nolint:errcheck // write to client — best effort
+		templates.MinifyAndWrite(w, buf.Bytes())
+	})
+
+	// Mount per-module routes and static dirs
+	for name, mod := range modules {
+		for _, r := range mod.Routes() {
+			// Skip index module root route — handled by the GET /{$} handler above
+			if name == "index" && r.Method == "GET" {
+				continue
+			}
+			handler := r.Handler
+			if mw := middlewareForRoute(r); mw != nil {
+				handler = mw(handler).ServeHTTP
+			}
+			pattern := fmt.Sprintf("%s %s", r.Method, r.Path)
+			mux.HandleFunc(pattern, handler)
+		}
+
+		staticDir := filepath.Join("modules", name, "static")
+		if exists(staticDir) {
+			prefix := fmt.Sprintf("/static/%s/", name)
+			mux.Handle(prefix, http.StripPrefix(prefix, http.FileServer(http.Dir(staticDir))))
+		}
+	}
+}

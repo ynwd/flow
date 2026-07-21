@@ -1,0 +1,130 @@
+// Fetch client for the __FEATURE__ module.
+// All calls to this feature's backend (handler.go) must go through here —
+// do not call fetch() directly from components.
+//
+// Includes in-memory cache with stale-while-revalidate for GET requests
+// and automatic request deduplication.
+
+export type __FEATURE_TITLE__ = {
+  id: string;
+  title: string;
+  content: string;
+  author: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type Create__FEATURE_TITLE__Payload = {
+  title: string;
+  content: string;
+  author: string;
+};
+
+export type Update__FEATURE_TITLE__Payload = {
+  title: string;
+  content: string;
+};
+
+// ── In-memory cache ─────────────────────────────────────────
+const cache = new Map<string, { data: unknown; ts: number }>();
+const CACHE_TTL = 10_000; // 10 seconds
+const inFlight = new Map<string, Promise<unknown>>();
+
+// Exposed for testing — clears all cached data
+export function __clearCache(): void {
+  cache.clear();
+  inFlight.clear();
+}
+
+function getCached<T>(key: string): { data: T; stale: boolean } | null {
+  const entry = cache.get(key);
+  if (!entry) return null;
+  return {
+    data: entry.data as T,
+    stale: Date.now() - entry.ts > CACHE_TTL,
+  };
+}
+
+function setCache(key: string, data: unknown): void {
+  cache.set(key, { data, ts: Date.now() });
+}
+
+function bustCache(prefix: string): void {
+  for (const key of cache.keys()) {
+    if (key.startsWith(prefix)) cache.delete(key);
+  }
+}
+
+async function dedupedFetch<T>(key: string, url: string, init?: RequestInit): Promise<T> {
+  // Return in-flight promise if same request is already pending
+  const pending = inFlight.get(key);
+  if (pending) return pending as Promise<T>;
+
+  const promise = fetch(url, init).then(async (res) => {
+    inFlight.delete(key);
+    if (!res.ok) throw new Error(`Failed: ${res.status}`);
+    // Handle 204 No Content (e.g. DELETE responses with empty body)
+    const data = res.status === 204 ? (undefined as T) : await res.json();
+    // Only cache GET responses
+    if (!init || init.method === undefined || init.method === "GET") {
+      setCache(key, data);
+    }
+    return data as T;
+  }).catch((err) => {
+    inFlight.delete(key);
+    throw err;
+  });
+
+  inFlight.set(key, promise);
+  return promise;
+}
+
+// ── API functions ────────────────────────────────────────────
+
+export async function list__FEATURE_TITLE__(): Promise<__FEATURE_TITLE__[]> {
+  const key = "list__FEATURE__";
+  const cached = getCached<__FEATURE_TITLE__[]>(key);
+  if (cached && !cached.stale) return cached.data;
+  // Return stale data immediately, refresh in background
+  if (cached && cached.stale) {
+    dedupedFetch<__FEATURE_TITLE__[]>(key, "/api/__FEATURE__").catch(() => {});
+    return cached.data;
+  }
+  return dedupedFetch<__FEATURE_TITLE__[]>(key, "/api/__FEATURE__");
+}
+
+export async function get__FEATURE_TITLE__(id: string): Promise<__FEATURE_TITLE__> {
+  const key = `get__FEATURE___${id}`;
+  const cached = getCached<__FEATURE_TITLE__>(key);
+  if (cached && !cached.stale) return cached.data;
+  if (cached && cached.stale) {
+    dedupedFetch<__FEATURE_TITLE__>(key, `/api/__FEATURE__/${id}`).catch(() => {});
+    return cached.data;
+  }
+  return dedupedFetch<__FEATURE_TITLE__>(key, `/api/__FEATURE__/${id}`);
+}
+
+export async function create__FEATURE_TITLE__(payload: Create__FEATURE_TITLE__Payload): Promise<__FEATURE_TITLE__> {
+  bustCache("list__FEATURE__");
+  return dedupedFetch<__FEATURE_TITLE__>("create__FEATURE__", "/api/__FEATURE__", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function update__FEATURE_TITLE__(id: string, payload: Update__FEATURE_TITLE__Payload): Promise<__FEATURE_TITLE__> {
+  bustCache(`get__FEATURE___${id}`);
+  bustCache("list__FEATURE__");
+  return dedupedFetch<__FEATURE_TITLE__>(`update__FEATURE___${id}`, `/api/__FEATURE__/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function delete__FEATURE_TITLE__(id: string): Promise<void> {
+  bustCache(`get__FEATURE___${id}`);
+  bustCache("list__FEATURE__");
+  await dedupedFetch<void>(`delete__FEATURE___${id}`, `/api/__FEATURE__/${id}`, { method: "DELETE" });
+}

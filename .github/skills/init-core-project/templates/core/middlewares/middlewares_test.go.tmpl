@@ -1,0 +1,248 @@
+package middlewares
+
+import (
+	"net/http"
+	"net/http/httptest"
+	"testing"
+)
+
+func TestLogging(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/test", nil)
+	rec := httptest.NewRecorder()
+
+	handler := Logging(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		//nolint:errcheck // test handler
+		_, _ = w.Write([]byte("ok"))
+	}))
+
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d", rec.Code)
+	}
+	if rec.Body.String() != "ok" {
+		t.Errorf("expected 'ok', got '%s'", rec.Body.String())
+	}
+}
+
+func TestPrivateNoAuth(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/private", nil)
+	rec := httptest.NewRecorder()
+
+	handler := Private(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusUnauthorized {
+		t.Errorf("expected 401, got %d", rec.Code)
+	}
+}
+
+func TestPrivateInvalidFormat(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/private", nil)
+	req.Header.Set("Authorization", "Invalid token")
+	rec := httptest.NewRecorder()
+
+	handler := Private(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusUnauthorized {
+		t.Errorf("expected 401, got %d", rec.Code)
+	}
+}
+
+func TestPrivateValidToken(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/private", nil)
+	req.Header.Set("Authorization", "Bearer mysecrettoken")
+	rec := httptest.NewRecorder()
+
+	var userID string
+	handler := Private(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if v, ok := r.Context().Value(UserIDKey).(string); ok {
+			userID = v
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d", rec.Code)
+	}
+	if userID != "mysecrettoken" {
+		t.Errorf("expected 'mysecrettoken', got '%s'", userID)
+	}
+}
+
+func TestSameOriginWithMatchingOrigin(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/sameorigin", nil)
+	req.Header.Set("Origin", "http://example.com")
+	req.Host = "example.com"
+	rec := httptest.NewRecorder()
+
+	handler := SameOrigin(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		//nolint:errcheck // test handler
+		_, _ = w.Write([]byte("allowed"))
+	}))
+
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d", rec.Code)
+	}
+	if rec.Body.String() != "allowed" {
+		t.Errorf("expected 'allowed', got '%s'", rec.Body.String())
+	}
+}
+
+func TestSameOriginWithMismatchedOrigin(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/sameorigin", nil)
+	req.Header.Set("Origin", "http://evil.com")
+	req.Host = "example.com"
+	rec := httptest.NewRecorder()
+
+	handler := SameOrigin(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusForbidden {
+		t.Errorf("expected 403, got %d", rec.Code)
+	}
+}
+
+func TestSameOriginFallsBackToReferer(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/sameorigin", nil)
+	req.Header.Set("Referer", "http://example.com/page")
+	req.Host = "example.com"
+	rec := httptest.NewRecorder()
+
+	handler := SameOrigin(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d", rec.Code)
+	}
+}
+
+func TestSameOriginNoOriginNoReferer(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/sameorigin", nil)
+	rec := httptest.NewRecorder()
+
+	handler := SameOrigin(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusForbidden {
+		t.Errorf("expected 403, got %d", rec.Code)
+	}
+}
+
+func TestRateLimitAllowsWithinLimit(t *testing.T) {
+	mw := RateLimit(100) // 100 req/s — very high
+	if mw == nil {
+		t.Fatal("expected non-nil middleware")
+	}
+
+	called := false
+	handler := mw(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		called = true
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	if !called {
+		t.Error("expected handler to be called")
+	}
+	if rec.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d", rec.Code)
+	}
+}
+
+func TestRateLimitBlocksWhenExceeded(t *testing.T) {
+	mw := RateLimit(1.0 / 60.0) // ~1 req per minute — very low
+	if mw == nil {
+		t.Fatal("expected non-nil middleware")
+	}
+
+	calls := 0
+	handler := mw(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		calls++
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	// First request — should be allowed
+	req1 := httptest.NewRequest(http.MethodGet, "/", nil)
+	rec1 := httptest.NewRecorder()
+	handler.ServeHTTP(rec1, req1)
+
+	if calls != 1 {
+		t.Errorf("expected 1 call, got %d", calls)
+	}
+	if rec1.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d", rec1.Code)
+	}
+
+	// Second request — should be blocked (1 req/min exceeded)
+	req2 := httptest.NewRequest(http.MethodGet, "/", nil)
+	rec2 := httptest.NewRecorder()
+	handler.ServeHTTP(rec2, req2)
+
+	if calls != 1 {
+		t.Errorf("expected still 1 call, got %d", calls)
+	}
+	if rec2.Code != http.StatusTooManyRequests {
+		t.Errorf("expected 429, got %d", rec2.Code)
+	}
+}
+
+func TestRateLimitZeroOrNegativeReturnsNil(t *testing.T) {
+	if mw := RateLimit(0); mw != nil {
+		t.Error("expected nil for 0")
+	}
+	if mw := RateLimit(-1); mw != nil {
+		t.Error("expected nil for negative")
+	}
+}
+
+func TestRateLimitExtractIP(t *testing.T) {
+	tests := []struct {
+		name     string
+		remote   string
+		headers  map[string]string
+		expected string
+	}{
+		{"cf header", "1.2.3.4:5678", map[string]string{"CF-Connecting-IP": "5.6.7.8"}, "5.6.7.8"},
+		{"x-forwarded-for", "1.2.3.4:5678", map[string]string{"X-Forwarded-For": "10.0.0.1, 10.0.0.2"}, "10.0.0.1"},
+		{"remote addr fallback", "192.168.1.1:8080", nil, "192.168.1.1:8080"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, "/", nil)
+			req.RemoteAddr = tt.remote
+			for k, v := range tt.headers {
+				req.Header.Set(k, v)
+			}
+			if got := extractIP(req); got != tt.expected {
+				t.Errorf("extractIP() = %q, want %q", got, tt.expected)
+			}
+		})
+	}
+}

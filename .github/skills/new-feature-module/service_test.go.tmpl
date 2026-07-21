@@ -1,0 +1,123 @@
+package __PACKAGE__
+
+import (
+	"context"
+	"errors"
+	"testing"
+)
+
+type fakeRepository struct {
+	createFn  func(ctx context.Context, title, content, author string) (__FEATURE_TITLE__, error)
+	listFn    func(ctx context.Context) ([]__FEATURE_TITLE__, error)
+	getByIDFn func(ctx context.Context, id string) (__FEATURE_TITLE__, error)
+	updateFn  func(ctx context.Context, id, title, content string) (__FEATURE_TITLE__, error)
+	deleteFn  func(ctx context.Context, id string) error
+}
+
+func (f *fakeRepository) Create(ctx context.Context, title, content, author string) (__FEATURE_TITLE__, error) {
+	return f.createFn(ctx, title, content, author)
+}
+func (f *fakeRepository) List(ctx context.Context) ([]__FEATURE_TITLE__, error) { return f.listFn(ctx) }
+func (f *fakeRepository) GetByID(ctx context.Context, id string) (__FEATURE_TITLE__, error) { return f.getByIDFn(ctx, id) }
+func (f *fakeRepository) Update(ctx context.Context, id, title, content string) (__FEATURE_TITLE__, error) { return f.updateFn(ctx, id, title, content) }
+func (f *fakeRepository) Delete(ctx context.Context, id string) error { return f.deleteFn(ctx, id) }
+
+func TestService_Create_Success(t *testing.T) {
+	repo := &fakeRepository{
+		createFn: func(ctx context.Context, title, content, author string) (__FEATURE_TITLE__, error) {
+			return __FEATURE_TITLE__{ID: "1", Title: title, Content: content, Author: author}, nil
+		},
+	}
+	svc := NewService(repo)
+
+	post, err := svc.Create(context.Background(), "Hello", "Body", "Alice")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if post.Title != "Hello" {
+		t.Errorf("expected 'Hello', got '%s'", post.Title)
+	}
+}
+
+func TestService_Create_EmptyTitle(t *testing.T) {
+	svc := NewService(&fakeRepository{})
+	_, err := svc.Create(context.Background(), "", "content", "author")
+	if err != ErrTitleRequired {
+		t.Errorf("expected ErrTitleRequired, got %v", err)
+	}
+}
+
+func TestService_Create_EmptyContent(t *testing.T) {
+	svc := NewService(&fakeRepository{})
+	_, err := svc.Create(context.Background(), "Title", "", "author")
+	if err != ErrContentRequired {
+		t.Errorf("expected ErrContentRequired, got %v", err)
+	}
+}
+
+func TestService_List_Success(t *testing.T) {
+	want := []__FEATURE_TITLE__{{ID: "1", Title: "A"}, {ID: "2", Title: "B"}}
+	repo := &fakeRepository{
+		listFn: func(ctx context.Context) ([]__FEATURE_TITLE__, error) { return want, nil },
+	}
+	svc := NewService(repo)
+
+	got, err := svc.List(context.Background())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(got) != 2 {
+		t.Errorf("expected 2, got %d", len(got))
+	}
+}
+
+func TestService_List_Error(t *testing.T) {
+	repo := &fakeRepository{
+		listFn: func(ctx context.Context) ([]__FEATURE_TITLE__, error) {
+			return nil, errors.New("db error")
+		},
+	}
+	svc := NewService(repo)
+	_, err := svc.List(context.Background())
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+}
+
+func TestService_GetByID_NotFound(t *testing.T) {
+	repo := &fakeRepository{
+		getByIDFn: func(ctx context.Context, id string) (__FEATURE_TITLE__, error) {
+			return __FEATURE_TITLE__{}, errors.New("not found")
+		},
+	}
+	svc := NewService(repo)
+	_, err := svc.GetByID(context.Background(), "x")
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+}
+
+func TestService_Update_Success(t *testing.T) {
+	repo := &fakeRepository{
+		updateFn: func(ctx context.Context, id, title, content string) (__FEATURE_TITLE__, error) {
+			return __FEATURE_TITLE__{ID: id, Title: title, Content: content}, nil
+		},
+	}
+	svc := NewService(repo)
+
+	post, err := svc.Update(context.Background(), "1", "Updated", "New content")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if post.Title != "Updated" {
+		t.Errorf("expected 'Updated', got '%s'", post.Title)
+	}
+}
+
+func TestService_Update_EmptyTitle(t *testing.T) {
+	svc := NewService(&fakeRepository{})
+	_, err := svc.Update(context.Background(), "1", "", "content")
+	if err != ErrTitleRequired {
+		t.Errorf("expected ErrTitleRequired, got %v", err)
+	}
+}

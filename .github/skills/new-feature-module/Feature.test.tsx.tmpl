@@ -1,0 +1,76 @@
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { __FEATURE_TITLE__List } from "./__FEATURE_TITLE__";
+
+const mockList = vi.fn();
+const mockCreate = vi.fn();
+const mockDelete = vi.fn();
+
+vi.mock("./api", () => ({
+  list__FEATURE_TITLE__: (...args: any[]) => mockList(...args),
+  create__FEATURE_TITLE__: (...args: any[]) => mockCreate(...args),
+  delete__FEATURE_TITLE__: (...args: any[]) => mockDelete(...args),
+}));
+
+describe("__FEATURE_TITLE__", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockList.mockResolvedValue([]);
+  });
+
+  it("renders posts when fetch succeeds", async () => {
+    mockList.mockResolvedValue([
+      { id: "a", title: "First", content: "Hello world", author: "Alice", created_at: "2026-01-01T00:00:00Z", updated_at: "2026-01-01T00:00:00Z" },
+      { id: "b", title: "Second", content: "More content", author: "Bob", created_at: "2026-01-02T00:00:00Z", updated_at: "2026-01-02T00:00:00Z" },
+    ]);
+    render(<__FEATURE_TITLE__List />);
+    expect(await screen.findByText("First")).toBeInTheDocument();
+    expect(await screen.findByText("Second")).toBeInTheDocument();
+  });
+
+  it("renders error on failure", async () => {
+    mockList.mockRejectedValue(new Error("Oops"));
+    render(<__FEATURE_TITLE__List />);
+    expect(await screen.findByText(/Error/)).toBeInTheDocument();
+  });
+
+  it("renders empty state", async () => {
+    render(<__FEATURE_TITLE__List />);
+    expect(await screen.findByText(/No posts yet/)).toBeInTheDocument();
+  });
+
+  it("calls create on submit", async () => {
+    mockCreate.mockResolvedValue({ id: "1", title: "New", content: "Body", author: "Anonymous", created_at: "", updated_at: "" });
+    render(<__FEATURE_TITLE__List />);
+    fireEvent.click(screen.getByText("New"));
+    const titleInput = screen.getByPlaceholderText("Post title");
+    const contentInput = screen.getByPlaceholderText("Write something...");
+    fireEvent.change(titleInput, { target: { value: "My Post" } });
+    fireEvent.change(contentInput, { target: { value: "Body text" } });
+    fireEvent.click(screen.getByText("Publish"));
+    await waitFor(() => {
+      expect(mockCreate).toHaveBeenCalledWith({ title: "My Post", content: "Body text", author: "Anonymous" });
+    });
+  });
+
+  it("does not call create for empty title", async () => {
+    render(<__FEATURE_TITLE__List />);
+    fireEvent.click(screen.getByText("New"));
+    fireEvent.click(screen.getByText("Publish"));
+    expect(mockCreate).not.toHaveBeenCalled();
+  });
+
+  it("calls delete when clicked", async () => {
+    mockList.mockResolvedValue([
+      { id: "y", title: "ToDelete", content: "Body", author: "Me", created_at: "", updated_at: "" },
+    ]);
+    mockDelete.mockResolvedValue(undefined);
+    render(<__FEATURE_TITLE__List />);
+    const article = await screen.findByText("ToDelete");
+    const deleteBtn = article.closest("article")?.querySelector("button");
+    if (deleteBtn) fireEvent.click(deleteBtn);
+    await waitFor(() => {
+      expect(mockDelete).toHaveBeenCalledWith("y");
+    });
+  });
+});

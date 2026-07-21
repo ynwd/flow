@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{.Title}}</title>
+<link rel="stylesheet" href="/static/css/app.min.css">
+<style>
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+body{opacity:0;animation:fadeIn .35s ease .1s forwards}
+@keyframes fadeIn{to{opacity:1}}
+@keyframes slideUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+@keyframes dotPulse{0%,100%{opacity:.4;transform:scale(1)}50%{opacity:1;transform:scale(1.35)}}
+@keyframes orbDrift{0%,100%{transform:translate(0,0)scale(1)}25%{transform:translate(30px,-20px)scale(1.05)}50%{transform:translate(-20px,30px)scale(.95)}75%{transform:translate(20px,20px)scale(1.02)}}
+
+.anim-up{animation:slideUp .5s ease both}
+.d1{animation-delay:.06s}.d2{animation-delay:.14s}.d3{animation-delay:.24s}.d4{animation-delay:.34s}
+
+.gradient-text{background:linear-gradient(135deg,#6366f1,#a855f7,#ec4899);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.light .gradient-text{background:linear-gradient(135deg,#4f46e5,#9333ea,#db2777);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+
+.glass-card{background:var(--glass-bg,rgba(255,255,255,.03));border:1px solid var(--glass-border,rgba(255,255,255,.06))}
+.light .glass-card{background:var(--glass-bg,rgba(255,255,255,.7));border:1px solid var(--glass-border,rgba(0,0,0,.06))}
+
+/* ── Premium background layers ── */
+.bg-glow{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden}
+.bg-glow::before{content:'';position:absolute;width:500px;height:500px;top:-120px;right:-100px;background:radial-gradient(circle,rgba(99,102,241,.12),transparent 70%);border-radius:50%;animation:orbDrift 12s ease-in-out infinite}
+.bg-glow::after{content:'';position:absolute;width:400px;height:400px;bottom:-100px;left:-80px;background:radial-gradient(circle,rgba(168,85,247,.1),transparent 70%);border-radius:50%;animation:orbDrift 10s ease-in-out infinite reverse}
+.light .bg-glow::before{background:radial-gradient(circle,rgba(99,102,241,.07),transparent 70%)}
+.light .bg-glow::after{background:radial-gradient(circle,rgba(168,85,247,.06),transparent 70%)}
+
+.bg-grid{position:fixed;inset:0;pointer-events:none;z-index:0}
+.bg-grid::before{content:'';position:absolute;inset:0;background-image:
+  linear-gradient(rgba(255,255,255,.015) 1px,transparent 1px),
+  linear-gradient(90deg,rgba(255,255,255,.015) 1px,transparent 1px);
+  background-size:48px 48px;mask-image:radial-gradient(ellipse 60% 40% at 50% 50%,#000 20%,transparent 70%)}
+.light .bg-grid::before{background-image:
+  linear-gradient(rgba(0,0,0,.03) 1px,transparent 1px),
+  linear-gradient(90deg,rgba(0,0,0,.03) 1px,transparent 1px)}
+
+.bg-orb{position:fixed;pointer-events:none;z-index:0;border-radius:50%;filter:blur(80px)}
+.bg-orb-1{width:300px;height:300px;top:10%;right:-60px;background:#6366f1;opacity:.06}
+.bg-orb-2{width:200px;height:200px;bottom:15%;left:-40px;background:#a855f7;opacity:.05}
+.light .bg-orb-1{opacity:.035}.light .bg-orb-2{opacity:.03}
+
+.status-dot{width:7px;height:7px;border-radius:50%;background:#22c55e;box-shadow:0 0 10px rgba(34,197,94,.5);animation:dotPulse 2s ease-in-out infinite}
+</style>
+<script>
+(function(){try{var t=localStorage.getItem("theme")||"dark",e=document.documentElement;e.className=t==="light"?"light":"dark";var s=document.getElementById("i-sun"),m=document.getElementById("i-moon");if(s&&m){if(t==="light"){s.style.display="block";m.style.display="none"}else{s.style.display="none";m.style.display="block"}}}catch(e){}})();
+function toggleTheme(){var e=document.documentElement;e.classList.toggle("light");document.documentElement.classList.toggle("dark");var n=e.classList.contains("light")?"light":"dark";localStorage.setItem("theme",n);var s=document.getElementById("i-sun"),m=document.getElementById("i-moon");if(s&&m){if(n==="light"){s.style.display="block";m.style.display="none"}else{s.style.display="none";m.style.display="block"}}}
+</script>
+</head>
+<body class="min-h-dvh flex flex-col bg-bg-primary text-text-primary">
+
+<div class="bg-glow" aria-hidden="true"></div>
+<div class="bg-grid" aria-hidden="true"></div>
+<div class="bg-orb bg-orb-1" aria-hidden="true"></div>
+<div class="bg-orb bg-orb-2" aria-hidden="true"></div>
+
+<header class="sticky top-0 z-20 flex items-center justify-between h-12 sm:h-14 px-4 sm:px-8 bg-bg-primary/75 backdrop-blur-lg">
+  <a href="/" class="flex items-center gap-2.5 no-underline">
+    <span class="flex items-center justify-center w-7 h-7 rounded-lg bg-accent text-white text-xs font-bold">F</span>
+    <span class="text-sm font-semibold tracking-tight text-text-primary">flow</span>
+    <span class="text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-accent/10 text-accent">v0.1.0</span>
+  </a>
+  <button onclick="toggleTheme()" class="flex items-center justify-center w-8 h-8 rounded-lg border border-text-muted/20 bg-transparent text-text-tertiary cursor-pointer transition-all hover:bg-accent-subtle hover:border-accent hover:text-accent" title="Toggle theme">
+    <svg id="i-sun" style="display:none" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" width="15" height="15"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+    <svg id="i-moon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" width="15" height="15"><path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
+  </button>
+</header>
+
+<main class="relative z-10 flex-1 flex flex-col items-center justify-center px-5 py-8 sm:py-12 lg:py-16">
+  <div class="w-full max-w-sm md:max-w-md flex flex-col items-center">
+
+    <!-- Hero -->
+    <div class="flex flex-col items-center text-center anim-up d1">
+      <span class="flex items-center justify-center w-12 h-12 rounded-2xl bg-accent/10 text-accent text-lg mb-6">✦</span>
+      <h1 class="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight leading-tight mb-3">
+        Welcome to <span class="gradient-text">Flow</span>
+      </h1>
+      <p class="text-sm sm:text-base text-text-tertiary max-w-xs mx-auto">Your app is running. Scaffold your first module to begin.</p>
+    </div>
+
+    <div class="h-4 sm:h-6"></div>
+
+    <!-- Status -->
+    <div class="flex items-center gap-2.5 anim-up d2">
+      <span class="status-dot"></span>
+      <span class="text-xs font-medium text-text-tertiary uppercase tracking-[0.15em]">Online</span>
+      <span class="w-px h-3.5 bg-border-subtle"></span>
+      <span class="text-[11px] font-mono text-text-tertiary/40">v0.1.0</span>
+    </div>
+
+    <div class="h-4 sm:h-6"></div>
+
+    <!-- Steps -->
+    <div class="glass-card rounded-2xl w-full anim-up d3">
+      <div class="divide-y divide-border-subtle/30">
+        <div class="flex items-start gap-4 px-5 py-3 sm:px-6 sm:py-4">
+          <span class="flex items-center justify-center w-7 h-7 rounded-lg bg-accent/10 text-accent text-[11px] font-semibold shrink-0 mt-0.5">1</span>
+          <div class="min-w-0">
+            <p class="text-sm font-medium text-text-primary">Scaffold a module</p>
+            <p class="mt-1 text-xs font-mono text-text-tertiary/60">make scaffold</p>
+          </div>
+        </div>
+        <div class="flex items-start gap-4 px-5 py-3 sm:px-6 sm:py-4">
+          <span class="flex items-center justify-center w-7 h-7 rounded-lg bg-accent/10 text-accent text-[11px] font-semibold shrink-0 mt-0.5">2</span>
+          <div class="min-w-0">
+            <p class="text-sm font-medium text-text-primary">Auto-registered</p>
+            <p class="mt-1 text-xs font-mono text-text-tertiary/60">init() auto-registers the module</p>
+          </div>
+        </div>
+        <div class="flex items-start gap-4 px-5 py-3 sm:px-6 sm:py-4">
+          <span class="flex items-center justify-center w-7 h-7 rounded-lg bg-accent/10 text-accent text-[11px] font-semibold shrink-0 mt-0.5">3</span>
+          <div class="min-w-0">
+            <p class="text-sm font-medium text-text-primary">Run the server</p>
+            <p class="mt-1 text-xs font-mono text-text-tertiary/60">make run</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="h-4 sm:h-6"></div>
+
+    <!-- CTA -->
+    <div class="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto anim-up d4">
+      <a href="https://github.com/ynwd/flow" target="_blank" class="inline-flex items-center justify-center gap-2 w-full sm:w-auto h-10 sm:h-11 px-6 sm:px-7 rounded-xl bg-accent text-white text-sm font-medium no-underline transition-all hover:opacity-85 active:scale-[.97]">
+        <svg class="w-4 h-4 shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+        Repository
+      </a>
+      <a href="https://go.dev" target="_blank" class="inline-flex items-center justify-center gap-2 w-full sm:w-auto h-10 sm:h-11 px-6 sm:px-7 rounded-xl border border-border-subtle bg-transparent text-text-secondary text-sm font-medium no-underline transition-all hover:bg-accent-subtle hover:border-accent hover:text-accent active:scale-[.97]">
+        <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+        Docs
+      </a>
+    </div>
+
+  </div>
+</main>
+
+<footer class="relative z-10 flex items-center justify-between h-12 sm:h-14 px-4 sm:px-8">
+  <span class="text-xs text-text-tertiary/60">&copy; {{.Year}} Flow</span>
+  <div class="flex items-center gap-5">
+    <a href="https://go.dev" target="_blank" class="text-xs text-text-tertiary/60 no-underline transition-colors hover:text-text-primary">Go</a>
+    <a href="https://react.dev" target="_blank" class="text-xs text-text-tertiary/60 no-underline transition-colors hover:text-text-primary">React</a>
+    <a href="https://tailwindcss.com" target="_blank" class="text-xs text-text-tertiary/60 no-underline transition-colors hover:text-text-primary">Tailwind</a>
+  </div>
+</footer>
+
+</body>
+</html>

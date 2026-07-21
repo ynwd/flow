@@ -1,0 +1,414 @@
+package templates
+
+import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"io"
+	"io/fs"
+	"net/http"
+	"reflect"
+	"strings"
+	"sync"
+	"text/template"
+	"time"
+
+	"github.com/tdewolff/minify/v2"
+	"github.com/tdewolff/minify/v2/html"
+)
+
+var (
+	htmlMinifier     *minify.M
+	htmlMinifierOnce sync.Once
+)
+
+func getHTMLMinifier() *minify.M {
+	htmlMinifierOnce.Do(func() {
+		htmlMinifier = minify.New()
+		htmlMinifier.Add("text/html", &html.Minifier{
+			KeepDocumentTags: true,
+			KeepEndTags:      true,
+			KeepWhitespace:   false,
+		})
+	})
+	return htmlMinifier
+}
+
+// SSRData is the interface that items must implement for skeleton rendering.
+// If a type has SkeletonFields(), the skeleton HTML will use those values.
+type SSRData interface {
+	SkeletonFields() map[string]string
+}
+
+// RenderSSR renders an HTML template with server-side data for React hydration.
+// It generates skeleton HTML from data so users see content before React hydrates.
+//
+// Usage in a handler:
+//
+//	data, _ := h.service.List(r.Context())
+//	templates.RenderSSR(w, templatesFS, "templates/shell.html",
+//	    "templates/skeleton-list.html", map[string]interface{}{"Title": "Page"}, data)
+func RenderSSR(w http.ResponseWriter, tplFS fs.FS, pagePattern, skeletonPattern string, templateData map[string]interface{}, initialData interface{}) {
+	// Inject InitialDataJSON
+	initialDataJSON, err := json.Marshal(initialData)
+	if err != nil {
+		RenderEmpty(w, tplFS, pagePattern, templateData)
+		return
+	}
+	templateData["InitialDataJSON"] = string(initialDataJSON)
+
+	// Render skeleton HTML from data
+	skeleton, err := renderSkeleton(tplFS, skeletonPattern, initialData)
+	if err == nil && skeleton != "" {
+		templateData["InitialHTML"] = skeleton
+	}
+
+	// Parse & execute page template
+	tmpl, err := template.ParseFS(tplFS, pagePattern)
+	if err != nil {
+		RenderEmpty(w, tplFS, pagePattern, templateData)
+		return
+	}
+
+	var buf bytes.Buffer
+	if err := tmpl.Execute(&buf, templateData); err != nil {
+		RenderEmpty(w, tplFS, pagePattern, templateData)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	//nolint:errcheck // write to client — best effort
+	MinifyAndWrite(w, buf.Bytes())
+}
+
+// RenderEmpty renders an HTML template without initial data or skeleton.
+// Used as graceful fallback when SSR data fetch fails — React will
+// render an empty state or fetch data client-side via api.ts.
+func RenderEmpty(w http.ResponseWriter, tplFS fs.FS, pattern string, templateData map[string]interface{}) {
+	tmpl, err := template.ParseFS(tplFS, pattern)
+	if err != nil {
+		http.Error(w, "template error: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	var buf bytes.Buffer
+	if err := tmpl.Execute(&buf, templateData); err != nil {
+		http.Error(w, "template exec error: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	//nolint:errcheck // write to client — best effort
+	MinifyAndWrite(w, buf.Bytes())
+}
+
+// renderSkeleton renders a skeleton template from the provided data.
+// Supports both single items and slices of any type using reflection.
+func renderSkeleton(tplFS fs.FS, pattern string, data interface{}) (string, error) {
+	if pattern == "" || data == nil {
+		return "", nil
+	}
+
+	type skeletonItem struct {
+		ID      string
+		Title   string
+		Content string
+		Author  string
+		Date    string
+		Delay   int
+	}
+
+	var tmplData interface{}
+	rv := reflect.ValueOf(data)
+
+	if rv.Kind() == reflect.Slice || rv.Kind() == reflect.Array {
+		length := rv.Len()
+		items := make([]skeletonItem, 0, length)
+		for i := 0; i < length; i++ {
+			m := structToMap(rv.Index(i).Interface())
+			items = append(items, skeletonItem{
+				ID:      getStr(m, "id"),
+				Title:   getStr(m, "title"),
+				Content: truncate(getStr(m, "content"), 120),
+				Author:  getStr(m, "author"),
+				Date:    formatDate(getStr(m, "created_at")),
+				Delay:   i * 30,
+			})
+		}
+		tmplData = map[string]interface{}{"Items": items}
+	} else {
+		// Single item
+		m := structToMap(data)
+		tmplData = map[string]interface{}{
+			"ID":      getStr(m, "id"),
+			"Title":   getStr(m, "title"),
+			"Content": getStr(m, "content"),
+			"Author":  getStr(m, "author"),
+			"Date":    formatDate(getStr(m, "created_at")),
+		}
+	}
+
+	tmpl, err := template.New("").ParseFS(tplFS, pattern)
+	if err != nil {
+		return "", err
+	}
+
+	var buf strings.Builder
+	if err := tmpl.Execute(&buf, tmplData); err != nil {
+		return "", err
+	}
+	return buf.String(), nil
+}
+
+// ── helpers ──────────────────────────────────────────────
+
+func structToMap(v interface{}) map[string]interface{} {
+	rv := reflect.ValueOf(v)
+	// Dereference pointer
+	if rv.Kind() == reflect.Ptr {
+		rv = rv.Elem()
+	}
+	if rv.Kind() != reflect.Struct {
+		// Fallback: try JSON round-trip
+		b, err := json.Marshal(v)
+		if err != nil {
+			return nil
+		}
+		var m map[string]interface{}
+		if err := json.Unmarshal(b, &m); err != nil {
+			return nil
+		}
+		return m
+	}
+
+	m := make(map[string]interface{})
+	t := rv.Type()
+	for i := 0; i < rv.NumField(); i++ {
+		field := rv.Field(i)
+		fieldName := t.Field(i).Name
+		jsonTag := t.Field(i).Tag.Get("json")
+		key := strings.Split(jsonTag, ",")[0]
+		if key == "" || key == "-" {
+			key = strings.ToLower(fieldName)
+		}
+		// Convert time.Time to RFC3339 string using reflection-safe method
+		if field.Type() == reflect.TypeOf(time.Time{}) {
+			if field.CanInterface() {
+				if tVal, ok := field.Interface().(time.Time); ok {
+					m[key] = tVal.Format(time.RFC3339)
+				}
+			} else {
+				// Fallback: call .String() via method
+				m[key] = field.MethodByName("Format").Call([]reflect.Value{reflect.ValueOf(time.RFC3339)})[0].String()
+			}
+		} else if field.CanInterface() {
+			m[key] = field.Interface()
+		} else {
+			m[key] = fmt.Sprintf("%v", field)
+		}
+	}
+	return m
+}
+
+func getStr(m map[string]interface{}, key string) string {
+	if m == nil {
+		return ""
+	}
+	switch v := m[key].(type) {
+	case string:
+		return v
+	default:
+		if v != nil {
+			b, err := json.Marshal(v)
+			if err != nil {
+				return ""
+			}
+			return string(b)
+		}
+		return ""
+	}
+}
+
+func truncate(s string, n int) string {
+	if len(s) <= n {
+		return s
+	}
+	return s[:n] + "..."
+}
+
+func formatDate(s string) string {
+	if s == "" {
+		return ""
+	}
+	t, err := time.Parse(time.RFC3339, s)
+	if err != nil {
+		t, err = time.Parse("2006-01-02T15:04:05", s)
+		if err != nil {
+			return s
+		}
+	}
+	return t.Format("Jan 2, 2006")
+}
+
+// ── Minification ─────────────────────────────────────────
+
+const (
+	stateText = iota
+	stateTag
+	statePre
+	stateTextarea
+	stateSvg
+)
+
+// MinifyAndWrite applies whitespace stripping then tdewolff/minify HTML
+// minification to the raw template output before writing to w.
+func MinifyAndWrite(w io.Writer, raw []byte) error {
+	stripped := stripWhitespace(raw)
+
+	minified, err := getHTMLMinifier().Bytes("text/html", stripped)
+	if err != nil || len(minified) == 0 {
+		_, err = w.Write(stripped)
+		return err
+	}
+
+	// Clean up any whitespace inside inline style attributes left by minifier
+	result := make([]byte, 0, len(minified))
+	insideStyle := false
+	for i := 0; i < len(minified); i++ {
+		if minified[i] == '\n' || minified[i] == '\r' || minified[i] == '\t' {
+			continue
+		}
+		if !insideStyle && i+6 < len(minified) && string(minified[i:i+7]) == `style="` {
+			insideStyle = true
+			result = append(result, minified[i:i+7]...)
+			i += 6
+			continue
+		}
+		if insideStyle && minified[i] == '"' {
+			insideStyle = false
+			result = append(result, '"')
+			continue
+		}
+		if insideStyle && minified[i] == ';' && i+1 < len(minified) && minified[i+1] == ' ' {
+			result = append(result, ';')
+			i++
+			continue
+		}
+		result = append(result, minified[i])
+	}
+
+	_, err = w.Write(result)
+	return err
+}
+
+// stripWhitespace removes redundant whitespace from HTML while preserving
+// content inside <pre>, <textarea>, and <svg> elements.
+func stripWhitespace(raw []byte) []byte {
+	stripped := make([]byte, 0, len(raw))
+	state := stateText
+	textHasContent := false
+	enteringSvg := false
+	inSvg := false
+	i := 0
+	for i < len(raw) {
+		b := raw[i]
+		switch state {
+		case stateText:
+			if b == '<' {
+				textHasContent = false
+				lower := strings.ToLower(string(raw[i : i+min(12, len(raw)-i)]))
+				if strings.HasPrefix(lower, "<pre") {
+					state = statePre
+				} else if strings.HasPrefix(lower, "<textarea") {
+					state = stateTextarea
+				} else if strings.HasPrefix(lower, "<svg") {
+					enteringSvg = true
+					state = stateTag
+				} else {
+					state = stateTag
+				}
+				stripped = append(stripped, b)
+			} else if b == '\n' || b == '\r' || b == '\t' {
+			} else if b == ' ' {
+				if textHasContent && len(stripped) > 0 && stripped[len(stripped)-1] != ' ' {
+					stripped = append(stripped, b)
+				}
+			} else {
+				textHasContent = true
+				stripped = append(stripped, b)
+			}
+		case stateTag:
+			if b == '>' {
+				if enteringSvg {
+					state = stateSvg
+					inSvg = true
+					enteringSvg = false
+				} else if inSvg {
+					state = stateSvg
+				} else {
+					state = stateText
+				}
+				textHasContent = false
+				if len(stripped) > 0 && stripped[len(stripped)-1] == ' ' {
+					stripped = stripped[:len(stripped)-1]
+				}
+				stripped = append(stripped, b)
+			} else if b == '\n' || b == '\r' || b == '\t' || b == ' ' {
+				lastSpace := len(stripped) > 0 && stripped[len(stripped)-1] == ' '
+				hasNonSpace := false
+				for j := len(stripped) - 1; j >= 0; j-- {
+					if stripped[j] == '<' {
+						break
+					}
+					if stripped[j] != ' ' {
+						hasNonSpace = true
+						break
+					}
+				}
+				if !lastSpace && hasNonSpace {
+					stripped = append(stripped, ' ')
+				}
+			} else {
+				stripped = append(stripped, b)
+			}
+		case stateSvg:
+			if b == '<' {
+				lower := strings.ToLower(string(raw[i : i+min(6, len(raw)-i)]))
+				if strings.HasPrefix(lower, "</svg") {
+					state = stateText
+					inSvg = false
+				} else {
+					state = stateTag
+				}
+				textHasContent = false
+				stripped = append(stripped, b)
+			} else if b == '\n' || b == '\r' || b == '\t' {
+			} else if b == ' ' {
+				if textHasContent && len(stripped) > 0 && stripped[len(stripped)-1] != ' ' {
+					stripped = append(stripped, b)
+				}
+			} else {
+				textHasContent = true
+				stripped = append(stripped, b)
+			}
+		case statePre, stateTextarea:
+			if b == '<' {
+				lower := strings.ToLower(string(raw[i : i+min(9, len(raw)-i)]))
+				if state == statePre && strings.HasPrefix(lower, "</pre") {
+					state = stateText
+				} else if state == stateTextarea && strings.HasPrefix(lower, "</textarea") {
+					state = stateText
+				}
+			}
+			stripped = append(stripped, b)
+		}
+		i++
+	}
+	return stripped
+}
+
+// ── Deprecated wrappers ──────────────────────────────────
+
+// RenderSSRSimple is the old signature without skeleton support.
+// Deprecated: use RenderSSR with a skeleton pattern.
+func RenderSSRSimple(w http.ResponseWriter, tplFS fs.FS, pattern string, templateData map[string]interface{}, initialData interface{}) {
+	RenderSSR(w, tplFS, pattern, "", templateData, initialData)
+}

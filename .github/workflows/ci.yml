@@ -1,0 +1,84 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  backend:
+    name: Backend (Go)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version: '1.24'
+          cache: true
+
+      - name: Init core (generate go.mod, go.sum)
+        run: bash .github/skills/init-core-project/scripts/init-core.sh --force
+
+      - name: Check if modules exist
+        id: check
+        run: |
+          if ls modules/*/module.go 2>/dev/null; then
+            echo "has_modules=true" >> "$GITHUB_OUTPUT"
+            echo "modules=$(ls -d modules/*/ 2>/dev/null | wc -l)" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_modules=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Lint
+        if: steps.check.outputs.has_modules == 'true'
+        uses: golangci/golangci-lint-action@v9
+        with:
+          version: latest
+          args: --timeout=5m
+
+      - name: Build
+        if: steps.check.outputs.has_modules == 'true'
+        run: go build ./...
+
+      - name: Test
+        if: steps.check.outputs.has_modules == 'true'
+        run: go test ./... -v
+
+      - name: Vet
+        if: steps.check.outputs.has_modules == 'true'
+        run: go vet ./...
+
+  frontend:
+    name: Frontend (React/TS)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+
+      - name: Init core
+        run: bash .github/skills/init-core-project/scripts/init-core.sh --force
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Check if frontend modules exist
+        id: check-fe
+        run: |
+          if ls modules/*/package.json 2>/dev/null; then
+            echo "has_fe=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_fe=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Lint
+        if: steps.check-fe.outputs.has_fe == 'true'
+        run: ./node_modules/.bin/eslint 'modules/**/*.{ts,tsx}'
+
+      - name: Test
+        if: steps.check-fe.outputs.has_fe == 'true'
+        run: npx vitest run --reporter=verbose

@@ -1,0 +1,22 @@
+package __PACKAGE__
+
+import (
+	"github.com/ynwd/flow/core/router"
+)
+
+func init() {
+	repo := NewRepository()
+	service := NewService(repo)
+	handler := NewHandler(service)
+	router.RegisterModule(&module{handler: handler})
+}
+
+type module struct {
+	handler *Handler
+}
+
+func (m *module) Name() string { return "__FEATURE__" }
+
+func (m *module) Routes() []router.Route {
+	return Routes(m.handler)
+}

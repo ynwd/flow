@@ -1,0 +1,113 @@
+package middlewares
+
+import (
+	"net/http"
+	"sync"
+	"time"
+)
+
+// RateLimiter melimitasi request per IP.
+// Strategy: sliding window — max N requests per window duration.
+type RateLimiter struct {
+	mu       sync.Mutex
+	requests map[string][]time.Time
+	max      int
+	window   time.Duration
+}
+
+// NewRateLimiter creates a rate limiter with max requests per window.
+func NewRateLimiter(max int, window time.Duration) *RateLimiter {
+	rl := &RateLimiter{
+		requests: make(map[string][]time.Time),
+		max:      max,
+		window:   window,
+	}
+	go func() {
+		for {
+			time.Sleep(5 * time.Minute)
+			rl.mu.Lock()
+			now := time.Now()
+			for ip, times := range rl.requests {
+				var active []time.Time
+				for _, t := range times {
+					if now.Sub(t) < rl.window {
+						active = append(active, t)
+					}
+				}
+				if len(active) == 0 {
+					delete(rl.requests, ip)
+				} else {
+					rl.requests[ip] = active
+				}
+			}
+			rl.mu.Unlock()
+		}
+	}()
+	return rl
+}
+
+// Allow checks if a request from an IP is allowed.
+func (rl *RateLimiter) Allow(ip string) bool {
+	rl.mu.Lock()
+	defer rl.mu.Unlock()
+
+	now := time.Now()
+	times := rl.requests[ip]
+
+	var active []time.Time
+	for _, t := range times {
+		if now.Sub(t) < rl.window {
+			active = append(active, t)
+		}
+	}
+
+	if len(active) >= rl.max {
+		rl.requests[ip] = active
+		return false
+	}
+
+	active = append(active, now)
+	rl.requests[ip] = active
+	return true
+}
+
+// extractIP gets client IP from request.
+func extractIP(r *http.Request) string {
+	if cf := r.Header.Get("CF-Connecting-IP"); cf != "" {
+		return cf
+	}
+	if fwd := r.Header.Get("X-Forwarded-For"); fwd != "" {
+		for i := 0; i < len(fwd); i++ {
+			if fwd[i] == ',' {
+				return fwd[:i]
+			}
+		}
+		return fwd
+	}
+	return r.RemoteAddr
+}
+
+// RateLimit is the exported variable — override to customize.
+// Creates middleware that rate-limits using the given config.
+// maxRequestsPerSecond is the sustained requests per second allowed.
+var RateLimit = defaultRateLimit
+
+func defaultRateLimit(maxRequestsPerSecond float64) func(http.Handler) http.Handler {
+	if maxRequestsPerSecond <= 0 {
+		return nil
+	}
+
+	limiter := NewRateLimiter(int(maxRequestsPerSecond*60), 1*time.Minute)
+
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			ip := extractIP(r)
+			if !limiter.Allow(ip) {
+				w.Header().Set("Retry-After", "60")
+				http.Error(w, `{"error":"rate limit exceeded"}`, http.StatusTooManyRequests)
+				return
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
+}

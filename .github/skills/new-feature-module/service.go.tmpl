@@ -1,0 +1,53 @@
+package __PACKAGE__
+
+import "context"
+
+// RepositoryInterface is the data-access contract the service depends on.
+type RepositoryInterface interface {
+	Create(ctx context.Context, title, content, author string) (__FEATURE_TITLE__, error)
+	List(ctx context.Context) ([]__FEATURE_TITLE__, error)
+	GetByID(ctx context.Context, id string) (__FEATURE_TITLE__, error)
+	Update(ctx context.Context, id, title, content string) (__FEATURE_TITLE__, error)
+	Delete(ctx context.Context, id string) error
+}
+
+// Service holds the business logic for the __FEATURE__ module.
+type Service struct {
+	repo RepositoryInterface
+}
+
+func NewService(repo RepositoryInterface) *Service {
+	return &Service{repo: repo}
+}
+
+func (s *Service) Create(ctx context.Context, title, content, author string) (__FEATURE_TITLE__, error) {
+	if title == "" {
+		return __FEATURE_TITLE__{}, ErrTitleRequired
+	}
+	if content == "" {
+		return __FEATURE_TITLE__{}, ErrContentRequired
+	}
+	return s.repo.Create(ctx, title, content, author)
+}
+
+func (s *Service) List(ctx context.Context) ([]__FEATURE_TITLE__, error) {
+	return s.repo.List(ctx)
+}
+
+func (s *Service) GetByID(ctx context.Context, id string) (__FEATURE_TITLE__, error) {
+	return s.repo.GetByID(ctx, id)
+}
+
+func (s *Service) Update(ctx context.Context, id, title, content string) (__FEATURE_TITLE__, error) {
+	if title == "" {
+		return __FEATURE_TITLE__{}, ErrTitleRequired
+	}
+	if content == "" {
+		return __FEATURE_TITLE__{}, ErrContentRequired
+	}
+	return s.repo.Update(ctx, id, title, content)
+}
+
+func (s *Service) Delete(ctx context.Context, id string) error {
+	return s.repo.Delete(ctx, id)
+}

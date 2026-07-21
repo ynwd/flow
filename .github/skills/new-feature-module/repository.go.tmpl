@@ -1,0 +1,91 @@
+package __PACKAGE__
+
+import (
+	"context"
+	"fmt"
+	"sort"
+	"sync"
+	"time"
+
+	"github.com/ynwd/flow/core/ulid"
+)
+
+// Repository handles data access for the __FEATURE__ module.
+type Repository struct {
+	mu    sync.RWMutex
+	items map[string]__FEATURE_TITLE__
+}
+
+func NewRepository() *Repository {
+	return &Repository{
+		items: make(map[string]__FEATURE_TITLE__),
+	}
+}
+
+func (r *Repository) Create(ctx context.Context, title, content, author string) (__FEATURE_TITLE__, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	item := __FEATURE_TITLE__{
+		ID:        ulid.New(),
+		Title:     title,
+		Content:   content,
+		Author:    author,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	}
+	r.items[item.ID] = item
+	return item, nil
+}
+
+func (r *Repository) Update(ctx context.Context, id, title, content string) (__FEATURE_TITLE__, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	item, ok := r.items[id]
+	if !ok {
+		return __FEATURE_TITLE__{}, fmt.Errorf("%s: not found", id)
+	}
+	item.Title = title
+	item.Content = content
+	item.UpdatedAt = time.Now()
+	r.items[id] = item
+	return item, nil
+}
+
+func (r *Repository) List(ctx context.Context) ([]__FEATURE_TITLE__, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	result := make([]__FEATURE_TITLE__, 0, len(r.items))
+	for _, item := range r.items {
+		result = append(result, item)
+	}
+	// Sort descending by CreatedAt (newest first)
+	sort.Slice(result, func(i, j int) bool {
+		return result[i].CreatedAt.After(result[j].CreatedAt)
+	})
+	return result, nil
+}
+
+func (r *Repository) GetByID(ctx context.Context, id string) (__FEATURE_TITLE__, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	item, ok := r.items[id]
+	if !ok {
+		return __FEATURE_TITLE__{}, fmt.Errorf("%s: not found", id)
+	}
+	return item, nil
+}
+
+func (r *Repository) Delete(ctx context.Context, id string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	if _, ok := r.items[id]; !ok {
+		return fmt.Errorf("%s: not found", id)
+	}
+	delete(r.items, id)
+	return nil
+}

@@ -1,0 +1,131 @@
+package __PACKAGE__
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"net/http"
+)
+
+// ServiceInterface is the business-logic contract the handler depends on.
+type ServiceInterface interface {
+	Create(ctx context.Context, title, content, author string) (__FEATURE_TITLE__, error)
+	List(ctx context.Context) ([]__FEATURE_TITLE__, error)
+	GetByID(ctx context.Context, id string) (__FEATURE_TITLE__, error)
+	Update(ctx context.Context, id, title, content string) (__FEATURE_TITLE__, error)
+	Delete(ctx context.Context, id string) error
+}
+
+// Handler holds dependencies for the __FEATURE__ module's HTTP handlers.
+type Handler struct {
+	service ServiceInterface
+}
+
+func NewHandler(service ServiceInterface) *Handler {
+	return &Handler{service: service}
+}
+
+// POST /api/__FEATURE__
+func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
+	var req Create__FEATURE_TITLE__Request
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	item, err := h.service.Create(r.Context(), req.Title, req.Content, req.Author)
+	if err != nil {
+		if errors.Is(err, ErrTitleRequired) || errors.Is(err, ErrContentRequired) {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	if err := json.NewEncoder(w).Encode(item); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+}
+
+// GET /api/__FEATURE__
+func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
+	items, err := h.service.List(r.Context())
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(items); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+}
+
+// GET /api/__FEATURE__/{id}
+func (h *Handler) GetByID(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if id == "" {
+		http.Error(w, "id is required", http.StatusBadRequest)
+		return
+	}
+
+	item, err := h.service.GetByID(r.Context(), id)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(item); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+}
+
+// PUT /api/__FEATURE__/{id}
+func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if id == "" {
+		http.Error(w, "id is required", http.StatusBadRequest)
+		return
+	}
+
+	var req Update__FEATURE_TITLE__Request
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	item, err := h.service.Update(r.Context(), id, req.Title, req.Content)
+	if err != nil {
+		if errors.Is(err, ErrTitleRequired) || errors.Is(err, ErrContentRequired) {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(item); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+}
+
+// DELETE /api/__FEATURE__/{id}
+func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if id == "" {
+		http.Error(w, "id is required", http.StatusBadRequest)
+		return
+	}
+
+	if err := h.service.Delete(r.Context(), id); err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}

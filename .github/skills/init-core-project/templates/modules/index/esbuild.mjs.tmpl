@@ -1,0 +1,52 @@
+import * as esbuild from 'esbuild';
+
+const isWatch = process.argv.includes('--watch');
+
+/** @type {esbuild.BuildOptions} */
+const config = {
+    entryPoints: ['Landing.tsx'],
+    outdir: 'static/dist',
+    bundle: true,
+    splitting: true,
+    format: 'esm',
+    chunkNames: 'chunks/[name]-[hash]',
+    entryNames: 'index',
+    minify: !isWatch,
+    sourcemap: isWatch ? 'inline' : false,
+    target: 'es2020',
+    loader: {
+        '.tsx': 'tsx',
+        '.ts': 'ts',
+    },
+    define: {
+        'process.env.NODE_ENV': isWatch ? '"development"' : '"production"',
+    },
+    treeShaking: true,
+    metafile: !isWatch,
+};
+
+async function main() {
+    if (isWatch) {
+        const ctx = await esbuild.context(config);
+        await ctx.watch();
+        console.log('[esbuild] watching for changes...');
+        return;
+    }
+
+    const result = await esbuild.build(config);
+    const out = result.outputFiles ? Object.keys(result.outputFiles).length : '?';
+    console.log(`[esbuild] build complete -> static/dist/ (${out} files)`);
+
+    if (isAnalyze && result.metafile) {
+        const analysis = await esbuild.analyzeMetafile(result.metafile, { verbose: true });
+        console.log('\n── Detailed Analysis ──');
+        console.log(analysis);
+    }
+}
+
+const isAnalyze = process.argv.includes('--analyze');
+
+main().catch((e) => {
+    console.error(e);
+    process.exit(1);
+});

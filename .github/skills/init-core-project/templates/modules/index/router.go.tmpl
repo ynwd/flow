@@ -1,0 +1,14 @@
+package index
+
+import "github.com/ynwd/flow/core/router"
+
+// Routes returns all HTTP routes for the index module.
+// The root '/' route is handled directly by the router — not registered here
+// to avoid pattern conflicts with the built-in GET /{$} handler.
+func Routes(handler *Handler) []router.Route {
+	return []router.Route{
+		// Root route is handled by router, but we expose Page via a sentinel route
+		// so the router can call indexMod.Routes() → handler.Page
+		{Method: "GET", Path: "/", Handler: handler.Page, Description: "Landing page", Access: router.AccessPublic, SSR: true},
+	}
+}

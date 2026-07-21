@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{.Title}}</title>
+  <link rel="stylesheet" href="/static/css/app.min.css">
+  {{if .Description}}<meta name="description" content="{{.Description}}">{{end}}
+  <script>
+    (function(){try{var t=localStorage.getItem("theme")||"dark";document.documentElement.className=t==="light"?"light":""}catch(e){}})();
+  </script>
+  <style>body{opacity:0;animation:fadeIn .15s ease-out forwards}@keyframes fadeIn{to{opacity:1}}</style>
+  <script>window.__PAGE__={{if .PageType}}"{{.PageType}}"{{else}}"detail"{{end}};</script>
+  {{if .ErrorMessage}}<script>window.__NOT_FOUND__=true;</script>{{end}}
+</head>
+<body>
+  <div id="__FEATURE__-root">{{if .InitialHTML}}{{.InitialHTML}}{{else if .ErrorMessage}}<div class="max-w-[42rem] mx-auto px-4 py-6"><div class="text-center py-12 text-text-tertiary"><p class="text-sm m-0">{{.ErrorMessage}}</p><a href="/__FEATURE__" class="inline-flex items-center justify-center gap-1.5 h-9 px-3 rounded-lg text-xs font-medium border border-border-subtle bg-transparent text-text-secondary cursor-pointer transition-all hover:bg-accent-subtle hover:border-accent hover:text-accent active:scale-[.97] no-underline select-none mt-3">Back to __FEATURE_TITLE__</a></div></div>{{end}}</div>
+  {{if .InitialDataJSON}}
+  <script id="__FEATURE__-initial-data" type="application/json">{{.InitialDataJSON}}</script>
+  <script>(function(){var e=document.getElementById("__FEATURE__-initial-data");window.__INITIAL_DATA__=JSON.parse(e.textContent);e.remove()})();</script>
+  {{end}}
+  <script type="module" src="/static/__FEATURE__/dist/__FEATURE__.js"></script>
+</body>
+</html>

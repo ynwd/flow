@@ -1,0 +1,16 @@
+package __PACKAGE__
+
+import "github.com/ynwd/flow/core/router"
+
+// Routes returns all HTTP routes for the __FEATURE__ module.
+func Routes(handler *Handler) []router.Route {
+	return []router.Route{
+		{Method: "GET", Path: "/__FEATURE__", Handler: handler.Page, Description: "__FEATURE_TITLE__ page", Access: __ACC_PAGE__, SSR: __SSR_PAGE__},
+		{Method: "GET", Path: "/__FEATURE__/{id}", Handler: handler.PageDetail, Description: "__FEATURE_TITLE__ detail", Access: __ACC_DETAIL__, SSR: __SSR_DETAIL__},
+		{Method: "POST", Path: "/api/__FEATURE__", Handler: handler.Create, Description: "Create __FEATURE_TITLE__", Access: __ACC_CREATE__, RateLimit: __RL_CREATE__},
+		{Method: "GET", Path: "/api/__FEATURE__", Handler: handler.List, Description: "List __FEATURE_TITLE__", Access: __ACC_LIST__},
+		{Method: "GET", Path: "/api/__FEATURE__/{id}", Handler: handler.GetByID, Description: "Get __FEATURE_TITLE__ by ID", Access: __ACC_GET__},
+		{Method: "PUT", Path: "/api/__FEATURE__/{id}", Handler: handler.Update, Description: "Update __FEATURE_TITLE__", Access: __ACC_UPDATE__, RateLimit: __RL_UPDATE__},
+		{Method: "DELETE", Path: "/api/__FEATURE__/{id}", Handler: handler.Delete, Description: "Delete __FEATURE_TITLE__", Access: __ACC_DELETE__, RateLimit: __RL_DELETE__},
+	}
+}

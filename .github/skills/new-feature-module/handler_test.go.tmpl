@@ -1,0 +1,140 @@
+package __PACKAGE__
+
+import (
+	"context"
+	"net/http"
+	"net/http/httptest"
+	"strings"
+	"testing"
+)
+
+type fakeRepo struct {
+	createFn  func(ctx context.Context, title, content, author string) (__FEATURE_TITLE__, error)
+	listFn    func(ctx context.Context) ([]__FEATURE_TITLE__, error)
+	getByIDFn func(ctx context.Context, id string) (__FEATURE_TITLE__, error)
+	updateFn  func(ctx context.Context, id, title, content string) (__FEATURE_TITLE__, error)
+	deleteFn  func(ctx context.Context, id string) error
+}
+
+func (f *fakeRepo) Create(ctx context.Context, title, content, author string) (__FEATURE_TITLE__, error) {
+	return f.createFn(ctx, title, content, author)
+}
+func (f *fakeRepo) List(ctx context.Context) ([]__FEATURE_TITLE__, error) { return f.listFn(ctx) }
+func (f *fakeRepo) GetByID(ctx context.Context, id string) (__FEATURE_TITLE__, error) { return f.getByIDFn(ctx, id) }
+func (f *fakeRepo) Update(ctx context.Context, id, title, content string) (__FEATURE_TITLE__, error) { return f.updateFn(ctx, id, title, content) }
+func (f *fakeRepo) Delete(ctx context.Context, id string) error { return f.deleteFn(ctx, id) }
+
+func TestHandler_Create_Success(t *testing.T) {
+	repo := &fakeRepo{
+		createFn: func(ctx context.Context, title, content, author string) (__FEATURE_TITLE__, error) {
+			return __FEATURE_TITLE__{ID: "1", Title: title, Content: content, Author: author}, nil
+		},
+	}
+	svc := NewService(repo)
+	h := NewHandler(svc)
+
+	body := `{"title":"Hello","content":"World","author":"Alice"}`
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/api/__FEATURE__", strings.NewReader(body))
+	r.Header.Set("Content-Type", "application/json")
+	h.Create(w, r)
+
+	if w.Code != http.StatusCreated {
+		t.Errorf("expected 201, got %d", w.Code)
+	}
+}
+
+func TestHandler_Create_MissingTitle(t *testing.T) {
+	repo := &fakeRepo{
+		createFn: func(ctx context.Context, title, content, author string) (__FEATURE_TITLE__, error) {
+			return __FEATURE_TITLE__{}, ErrTitleRequired
+		},
+	}
+	svc := NewService(repo)
+	h := NewHandler(svc)
+
+	body := `{"content":"only"}`
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/api/__FEATURE__", strings.NewReader(body))
+	r.Header.Set("Content-Type", "application/json")
+	h.Create(w, r)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("expected 400, got %d", w.Code)
+	}
+}
+
+func TestHandler_List_Success(t *testing.T) {
+	repo := &fakeRepo{
+		listFn: func(ctx context.Context) ([]__FEATURE_TITLE__, error) {
+			return []__FEATURE_TITLE__{{ID: "1", Title: "A"}}, nil
+		},
+	}
+	svc := NewService(repo)
+	h := NewHandler(svc)
+
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodGet, "/api/__FEATURE__", nil)
+	h.List(w, r)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d", w.Code)
+	}
+}
+
+func TestHandler_GetByID_Success(t *testing.T) {
+	repo := &fakeRepo{
+		getByIDFn: func(ctx context.Context, id string) (__FEATURE_TITLE__, error) {
+			return __FEATURE_TITLE__{ID: id, Title: "Found"}, nil
+		},
+	}
+	svc := NewService(repo)
+	h := NewHandler(svc)
+
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodGet, "/api/__FEATURE__/1", nil)
+	r.SetPathValue("id", "1")
+	h.GetByID(w, r)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d", w.Code)
+	}
+}
+
+func TestHandler_Update_Success(t *testing.T) {
+	repo := &fakeRepo{
+		updateFn: func(ctx context.Context, id, title, content string) (__FEATURE_TITLE__, error) {
+			return __FEATURE_TITLE__{ID: id, Title: title, Content: content}, nil
+		},
+	}
+	svc := NewService(repo)
+	h := NewHandler(svc)
+
+	body := `{"title":"Updated","content":"New"}`
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPut, "/api/__FEATURE__/1", strings.NewReader(body))
+	r.Header.Set("Content-Type", "application/json")
+	r.SetPathValue("id", "1")
+	h.Update(w, r)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d", w.Code)
+	}
+}
+
+func TestHandler_Delete_Success(t *testing.T) {
+	repo := &fakeRepo{
+		deleteFn: func(ctx context.Context, id string) error { return nil },
+	}
+	svc := NewService(repo)
+	h := NewHandler(svc)
+
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodDelete, "/api/__FEATURE__/1", nil)
+	r.SetPathValue("id", "1")
+	h.Delete(w, r)
+
+	if w.Code != http.StatusNoContent {
+		t.Errorf("expected 204, got %d", w.Code)
+	}
+}
