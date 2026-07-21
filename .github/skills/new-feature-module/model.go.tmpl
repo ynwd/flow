@@ -1,0 +1,36 @@
+package __PACKAGE__
+
+import (
+	"errors"
+	"time"
+)
+
+// Sentinel errors for the __FEATURE__ module.
+var (
+	ErrTitleRequired   = errors.New("title is required")
+	ErrContentRequired = errors.New("content is required")
+	ErrNotFound        = errors.New("not found")
+)
+
+// __FEATURE_TITLE__ is the domain type for the __FEATURE__ module.
+type __FEATURE_TITLE__ struct {
+	ID        string    `json:"id"`
+	Title     string    `json:"title"`
+	Content   string    `json:"content"`
+	Author    string    `json:"author"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+// Create__FEATURE_TITLE__Request is the payload for creating a new item.
+type Create__FEATURE_TITLE__Request struct {
+	Title   string `json:"title"`
+	Content string `json:"content"`
+	Author  string `json:"author"`
+}
+
+// Update__FEATURE_TITLE__Request is the payload for updating an existing item.
+type Update__FEATURE_TITLE__Request struct {
+	Title   string `json:"title"`
+	Content string `json:"content"`
+}

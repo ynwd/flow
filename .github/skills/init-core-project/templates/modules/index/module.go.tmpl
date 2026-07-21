@@ -1,0 +1,20 @@
+package index
+
+import (
+	"github.com/ynwd/flow/core/router"
+)
+
+func init() {
+	handler := NewHandler()
+	router.RegisterModule(&module{handler: handler})
+}
+
+type module struct {
+	handler *Handler
+}
+
+func (m *module) Name() string { return "index" }
+
+func (m *module) Routes() []router.Route {
+	return Routes(m.handler)
+}

@@ -1,0 +1,48 @@
+# golangci-lint configuration
+# https://golangci-lint.run/usage/configuration/
+#
+# Run: golangci-lint run ./...
+
+version: "2"
+
+linters:
+  enable:
+    - errcheck
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+    - misspell
+    - prealloc
+    - unconvert
+  disable:
+    - paralleltest
+
+  settings:
+    errcheck:
+      check-type-assertions: true
+      check-blank: true
+
+  exclusions:
+    paths:
+      - node_modules
+    rules:
+      - linters: [staticcheck]
+        text: "QF1003"
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
+
+  settings:
+    goimports:
+      local-prefixes: [github.com/ynwd/flow]
+
+run:
+  timeout: 2m
+  tests: true
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0

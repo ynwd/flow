@@ -1,0 +1,225 @@
+import { forwardRef, ReactNode } from 'react';
+import {
+  CardProps,
+  CardHeaderProps,
+  CardContentProps,
+  CardFooterProps,
+  CardProgress,
+  CardFooterButton,
+} from './Card.types';
+
+// ============================================
+// Utility: Classname merger
+// ============================================
+
+function cn(...classes: (string | undefined | null | false)[]): string {
+  return classes.filter(Boolean).join(' ');
+}
+
+// ============================================
+// Card.Container
+// ============================================
+
+const variantStyles: Record<string, string> = {
+  default: 'bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm',
+  modal: 'bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl',
+  panel: 'bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg',
+};
+
+export const Card = forwardRef<HTMLDivElement, CardProps>(
+  ({ variant = 'default', children, className }, ref) => {
+    return (
+      <div
+        ref={ref}
+        className={cn(
+          'overflow-hidden',
+          variantStyles[variant],
+          className
+        )}
+      >
+        {children}
+      </div>
+    );
+  }
+);
+
+Card.displayName = 'Card';
+
+// ============================================
+// Card.Header
+// ============================================
+
+function ProgressSegment({ index, current, total }: { index: number; current: number; total: number }) {
+  const isActive = index === current;
+  const isCompleted = index < current;
+
+  return (
+    <div
+      className={cn(
+        'h-1 flex-1 rounded-full transition-colors duration-200',
+        isCompleted && 'bg-blue-600 dark:bg-blue-500',
+        isActive && 'bg-blue-600 dark:bg-blue-500',
+        !isCompleted && !isActive && 'bg-gray-200 dark:bg-gray-700'
+      )}
+      aria-current={isActive ? 'step' : undefined}
+    />
+  );
+}
+
+function ProgressBar({ progress }: { progress: CardProgress }) {
+  const { current, total } = progress;
+
+  if (total <= 1) {
+    return null;
+  }
+
+  return (
+    <div className="flex gap-1.5 px-6 pb-4" role="progressbar" aria-valuenow={current} aria-valuemin={1} aria-valuemax={total}>
+      {Array.from({ length: total }, (_, i) => (
+        <ProgressSegment key={i} index={i + 1} current={current} total={total} />
+      ))}
+    </div>
+  );
+}
+
+function CloseButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="p-1 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:text-gray-300 dark:hover:bg-gray-800 transition-colors"
+      aria-label="Close"
+    >
+      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+      </svg>
+    </button>
+  );
+}
+
+export function CardHeader({
+  title,
+  onClose,
+  progress,
+  action,
+  className,
+}: CardHeaderProps) {
+  return (
+    <div className={cn('border-b border-gray-200 dark:border-gray-700', className)}>
+      <div className="flex items-center justify-between px-6 pt-5 pb-3">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+          {title}
+        </h2>
+        <div className="flex items-center gap-2">
+          {action}
+          {onClose && <CloseButton onClick={onClose} />}
+        </div>
+      </div>
+      {progress && <ProgressBar progress={progress} />}
+    </div>
+  );
+}
+
+// ============================================
+// Card.Content
+// ============================================
+
+const paddingStyles: Record<string, string> = {
+  none: '',
+  sm: 'p-3',
+  md: 'p-6',
+  lg: 'p-8',
+};
+
+export function CardContent({
+  children,
+  padding = 'md',
+  scrollable = false,
+  maxHeight,
+  className,
+}: CardContentProps) {
+  return (
+    <div
+      className={cn(
+        paddingStyles[padding],
+        scrollable && 'overflow-y-auto',
+        className
+      )}
+      style={scrollable && maxHeight ? { maxHeight } : undefined}
+    >
+      {children}
+    </div>
+  );
+}
+
+// ============================================
+// Card.Footer
+// ============================================
+
+function FooterButton({ button }: { button: CardFooterButton }) {
+  const isPrimary = button.variant !== 'secondary';
+
+  return (
+    <button
+      type="button"
+      onClick={button.onClick}
+      disabled={button.disabled}
+      className={cn(
+        'px-5 py-2.5 rounded-lg font-medium text-sm transition-colors',
+        isPrimary
+          ? 'bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600'
+          : 'bg-gray-100 text-gray-900 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700',
+        button.disabled && 'opacity-50 cursor-not-allowed'
+      )}
+    >
+      {button.label}
+    </button>
+  );
+}
+
+function StepCounter({ step }: { step: CardProgress }) {
+  return (
+    <span className="text-sm text-gray-500 dark:text-gray-400 tabular-nums">
+      {step.current}/{step.total}
+    </span>
+  );
+}
+
+export function CardFooter({
+  prevButton,
+  nextButton,
+  stepIndicator,
+  centerContent,
+  className,
+}: CardFooterProps) {
+  return (
+    <div
+      className={cn(
+        'flex items-center justify-between px-6 py-4 border-t border-gray-200 dark:border-gray-700',
+        className
+      )}
+    >
+      <div>
+        {prevButton && <FooterButton button={{ ...prevButton, variant: 'secondary' }} />}
+      </div>
+
+      <div className="flex items-center justify-center">
+        {centerContent || (stepIndicator && <StepCounter step={stepIndicator} />)}
+      </div>
+
+      <div>
+        {nextButton && <FooterButton button={nextButton} />}
+      </div>
+    </div>
+  );
+}
+
+// ============================================
+// Attach sub-components
+// ============================================
+
+Card.Header = CardHeader;
+Card.Content = CardContent;
+Card.Footer = CardFooter;
+
+export default Card;
