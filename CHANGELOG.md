@@ -6,6 +6,9 @@ All notable changes to this project will be documented in this file.
 
 - Nothing yet.
 
+## [v0.1.0] - 2026-07-25
+
+- enhance release script with improved tag resolution and changelog handling ([41ae561](https://github.com/ynwd/flow/commit/41ae561))
 ## [v0.0.6] - 2026-07-25
 
 ### Added
