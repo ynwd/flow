@@ -12,9 +12,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          submodules: recursive
 
       - name: Init core (generate files only, skip build)
-        run: bash .github/skills/init-core-project/scripts/init-core.sh --force --skip-post
+        run: bash .copilot/skills/init-core-project/scripts/init-core.sh --force --skip-post
 
       - uses: actions/setup-go@v7
         with:
@@ -62,13 +64,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          submodules: recursive
 
       - uses: actions/setup-node@v7
         with:
           node-version: '22'
 
       - name: Init core (generate files only, skip build)
-        run: bash .github/skills/init-core-project/scripts/init-core.sh --force --skip-post
+        run: bash .copilot/skills/init-core-project/scripts/init-core.sh --force --skip-post
 
       - name: Install dependencies
         run: npm install
