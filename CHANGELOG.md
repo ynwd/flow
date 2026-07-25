@@ -8,16 +8,18 @@ All notable changes to this project will be documented in this file.
 
 ## [v0.0.3] - 2026-07-25
 
-- landing page layout and CI optimization (4841e7a)
-## [0.0.1] - 2026-07-25
+- Fix landing page layout and CI optimization ([4841e7a](https://github.com/ynwd/flow/commit/4841e7a))
 
-- simplify CHANGELOG update to use temp file approach (f97ed3c)
-- simplify CHANGELOG update logic in release script (bf03b7d)
-- auto-update CHANGELOG with categorized commit entries (561003e)
-- update CHANGELOG for v0.0.1 (f637eca)
-## [0.0.1] - 2026-07-25
+## [v0.0.2] - 2026-07-25
+
+- Fix `make run` error — handle `fuser` exit code in Makefile ([9e39c8f](https://github.com/ynwd/flow/commit/9e39c8f))
+- Add release skill with auto-version detection ([81d318f](https://github.com/ynwd/flow/commit/81d318f))
+- Upgrade `action-gh-release@v2` → `@v3` for Node.js 24 ([7cff390](https://github.com/ynwd/flow/commit/7cff390))
+
+## [v0.0.1] - 2026-07-25
 
 ### Added
+
 - Initial open-source release.
 - Go + React modular monolith scaffold (`init-core-project` + `new-feature-module`).
 - AI agent orchestration: `@orchestrator`, `@analyst`, `@implementer-be`, `@implementer-fe`, `@reviewer`.
@@ -33,6 +35,7 @@ All notable changes to this project will be documented in this file.
 - GitHub Actions workflow for automated releases.
 
 ### Fixed
+
 - CI workflow: reordered `init-core.sh` before `setup-go@v7` to fix cache restore.
 - CI workflow: disabled Go module cache (`cache: false`) to resolve tar corruption.
 - `.gitignore`: removed blanket `modules/*` rule that ignored all module code.
@@ -53,6 +56,7 @@ All notable changes to this project will be documented in this file.
 - Release workflow: upgraded `action-gh-release@v2` → `@v3` for Node.js 24.
 
 ### Added (code review)
+
 - `router_test.go.tmpl`: tests for `RegisterModule`, `GetModules`, `BuildRouter`, `cachedFileServer`.
 - `render_test.go.tmpl`: tests for `structToMap`, `getStr`, `truncate`, `formatDate`, `SSRData` interface.
 - `ulid_test.go.tmpl`: tests for `New()`, uniqueness, non-empty.

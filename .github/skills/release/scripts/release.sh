@@ -193,13 +193,13 @@ while IFS='|' read -r MSG HASH; do
   # Categorize
   if [[ "$MSG" =~ ^feat(\(.+\))?: ]]; then
     DESC=$(echo "$MSG" | sed -E 's/^feat(\([^)]*\))?:\s*//')
-    NEW_ENTRIES="${NEW_ENTRIES}- ${DESC} (${HASH})\n"
+    NEW_ENTRIES="${NEW_ENTRIES}- ${DESC} ([${HASH}](https://github.com/ynwd/flow/commit/${HASH}))\n"
   elif [[ "$MSG" =~ ^fix(\(.+\))?: ]]; then
     DESC=$(echo "$MSG" | sed -E 's/^fix(\([^)]*\))?:\s*//')
-    NEW_ENTRIES="${NEW_ENTRIES}- ${DESC} (${HASH})\n"
+    NEW_ENTRIES="${NEW_ENTRIES}- ${DESC} ([${HASH}](https://github.com/ynwd/flow/commit/${HASH}))\n"
   elif [[ "$MSG" =~ ^(refactor|chore|ci|docs|style|test|perf|build)(\(.+\))?: ]]; then
     DESC=$(echo "$MSG" | sed -E 's/^[a-z]+(\([^)]*\))?:\s*//')
-    NEW_ENTRIES="${NEW_ENTRIES}- ${DESC} (${HASH})\n"
+    NEW_ENTRIES="${NEW_ENTRIES}- ${DESC} ([${HASH}](https://github.com/ynwd/flow/commit/${HASH}))\n"
   fi
 done <<< "$COMMITS"
 

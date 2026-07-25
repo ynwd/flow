@@ -56,9 +56,9 @@ No prompts needed — fully automatic detection.
 
 | Commit Pattern | Category | Example Entry |
 |---|---|---|
-| `feat:` or `feat(scope):` | **Added** | `- add user auth (a1b2c3d)` |
-| `fix:` or `fix(scope):` | **Fixed** | `- handle null pointer (e4f5g6h)` |
-| `refactor:`, `chore:`, `ci:`, `docs:`, `style:`, `test:`, `perf:`, `build:` | **Changed** | `- update dependencies (i7j8k9l)` |
+| `feat:` or `feat(scope):` | **Added** | `- add user auth ([a1b2c3d](https://github.com/ynwd/flow/commit/a1b2c3d))` |
+| `fix:` or `fix(scope):` | **Fixed** | `- handle null pointer ([e4f5g6h](https://github.com/ynwd/flow/commit/e4f5g6h))` |
+| `refactor:`, `chore:`, `ci:`, `docs:`, `style:`, `test:`, `perf:`, `build:` | **Changed** | `- update dependencies ([i7j8k9l](https://github.com/ynwd/flow/commit/i7j8k9l))` |
 | Other conventional commits | **Other** | `- update README (m0n1o2p)` |
 
 ### Manual Run
@@ -96,14 +96,14 @@ This project follows [Semantic Versioning](https://semver.org/):
 ## [1.0.0] - 2026-07-25
 
 ### Added
-- Feature A
-- Feature B
+- Feature A ([abc1234](https://github.com/ynwd/flow/commit/abc1234))
+- Feature B ([def5678](https://github.com/ynwd/flow/commit/def5678))
 
 ### Fixed
-- Bug fix X
+- Bug fix X ([ghi9012](https://github.com/ynwd/flow/commit/ghi9012))
 
 ### Changed
-- Improvement Y
+- Improvement Y ([jkl3456](https://github.com/ynwd/flow/commit/jkl3456))
 ```
 
 ## GitHub Release
