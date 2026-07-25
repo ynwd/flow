@@ -10,7 +10,7 @@ scaffold:      ## Scaffold a new feature module: make scaffold name=blog [layers
 
 
 run:           ## Build all & restart Go server
-	@fuser -k 3000/tcp 2>/dev/null
+	@fuser -k 3000/tcp 2>/dev/null || true
 	@npm run build:css 2>&1 | tail -1
 	@for dir in modules/*/; do \
 		if [ -f "$$dir/package.json" ] && grep -q '"build"' "$$dir/package.json" 2>/dev/null; then \
@@ -24,7 +24,7 @@ css:           ## Build Tailwind CSS
 	npm run build:css
 
 rebuild:       ## Copy app.css.tmpl → app.css, rebuild CSS, restart server
-	@cp .github/skills/init-core-project/templates/core/static/css/app.css.tmpl core/static/css/app.css 2>/dev/null; npm run build:css 2>&1 | tail -1; fuser -k 3000/tcp 2>/dev/null; go run . &
+	@cp .github/skills/init-core-project/templates/core/static/css/app.css.tmpl core/static/css/app.css 2>/dev/null; npm run build:css 2>&1 | tail -1; fuser -k 3000/tcp 2>/dev/null || true; go run . &
 
 
 # ─── Test ────────────────────────────────────────────────
