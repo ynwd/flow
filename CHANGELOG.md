@@ -6,6 +6,14 @@ All notable changes to this project will be documented in this file.
 
 - Nothing yet.
 
+## [v0.1.4] - 2026-07-26
+
+- add sync submodule commands to Makefile ([2a98033](https://github.com/ynwd/flow/commit/2a98033))
+- update .copilot submodule (sync-copilot improvements) ([d3c1f3b](https://github.com/ynwd/flow/commit/d3c1f3b))
+- remove .core-state.json from tracking (dynamically generated) ([5adcbd4](https://github.com/ynwd/flow/commit/5adcbd4))
+- update .copilot submodule (cleanup sync-templates references) ([09b4e0d](https://github.com/ynwd/flow/commit/09b4e0d))
+- update .copilot submodule (remove sync-templates.sh) ([c1eb489](https://github.com/ynwd/flow/commit/c1eb489))
+- update .copilot submodule (remove Makefile.tmpl, fix init-core.sh) ([cb286c7](https://github.com/ynwd/flow/commit/cb286c7))
 ## [v0.1.3] - 2026-07-25
 
 - remove unused configuration files and update Makefile paths to .copilot ([1dadf41](https://github.com/ynwd/flow/commit/1dadf41))
