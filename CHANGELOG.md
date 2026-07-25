@@ -6,6 +6,9 @@ All notable changes to this project will be documented in this file.
 
 - Nothing yet.
 
+## [v0.0.2] - 2026-07-25
+
+- handle fuser exit code in Makefile (9e39c8f)
 ## [0.0.1] - 2026-07-25
 
 - simplify CHANGELOG update to use temp file approach (f97ed3c)
