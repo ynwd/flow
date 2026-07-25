@@ -6,6 +6,6 @@ All notable changes to this project will be documented in this file.
 
 - Nothing yet.
 
-## [v0.0.4] - 2026-07-25
+## [v0.0.5] - 2026-07-25
 
-- add commit links to CHANGELOG entries ([bb6d266](https://github.com/ynwd/flow/commit/bb6d266))
+- add --force to make init for fresh clones ([3945484](https://github.com/ynwd/flow/commit/3945484))
