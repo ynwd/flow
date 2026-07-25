@@ -47,8 +47,8 @@ Flow is a **full-stack web framework** for building modern web applications with
 ### Installation
 
 ```bash
-# Clone the repository
-git clone <repo-url>
+# Clone the repository (with submodule for shared AI config)
+git clone --recurse-submodules <repo-url>
 cd flow
 
 # Initialize core project files
@@ -61,11 +61,17 @@ make run
 open http://localhost:3000
 ```
 
+> **Already cloned without `--recurse-submodules`?** Run this to fetch the submodule:
+> ```bash
+> git submodule update --init --recursive
+> ```
+
 ### What Happens
 
-1. `make init` — Generates core files from templates (main.go, go.mod, core/, modules/)
-2. `make run` — Builds Tailwind CSS, compiles React bundles, starts Go server
-3. Server runs at **localhost:3000** with a landing page
+1. `git clone --recurse-submodules` — Fetches repo + `.copilot/` submodule (shared AI agent config)
+2. `make init` — Generates core files from templates (main.go, go.mod, core/, modules/)
+3. `make run` — Builds Tailwind CSS, compiles React bundles, starts Go server
+4. Server runs at **localhost:3000** with a landing page
 
 ---
 
