@@ -6,6 +6,9 @@ All notable changes to this project will be documented in this file.
 
 - Nothing yet.
 
+## [v0.1.2] - 2026-07-25
+
+- update init-core.sh path to .copilot/ and add submodules: recursive to checkout ([8368433](https://github.com/ynwd/flow/commit/8368433))
 ## [v0.1.1] - 2026-07-25
 
 - move shared config to .copilot submodule, clean .github/ to repo-specific only ([289aaa8](https://github.com/ynwd/flow/commit/289aaa8))
