@@ -6,9 +6,9 @@ All notable changes to this project will be documented in this file.
 
 - Nothing yet.
 
-## [v0.0.2] - 2026-07-25
+## [v0.0.3] - 2026-07-25
 
-- handle fuser exit code in Makefile (9e39c8f)
+- landing page layout and CI optimization (4841e7a)
 ## [0.0.1] - 2026-07-25
 
 - simplify CHANGELOG update to use temp file approach (f97ed3c)
