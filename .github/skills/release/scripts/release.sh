@@ -39,11 +39,34 @@ info()  { echo -e "${GREEN}✓${NC} $1"; }
 warn()  { echo -e "${YELLOW}⚠${NC} $1"; }
 error() { echo -e "${RED}✗${NC} $1" >&2; exit 1; }
 
+# ── Resolve latest reachable tag ─────────────────────────
+# When tags exist but are unreachable from HEAD (e.g. after root
+# commit rewrite), fall back to the newest tag by version sort.
+resolve_latest_tag() {
+  # Try the fast path first
+  local tag
+  tag=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+  if [[ -n "$tag" ]]; then
+    echo "$tag"
+    return
+  fi
+
+  # Fallback: find the highest semver tag across the whole repo
+  local all_tags
+  all_tags=$(git tag -l 'v*' 2>/dev/null | sort -V || echo "")
+  if [[ -n "$all_tags" ]]; then
+    echo "$all_tags" | tail -1
+    return
+  fi
+
+  echo ""
+}
+
 # ── Auto-detect version type from commits ────────────────
 
 detect_version_type() {
   local latest_tag
-  latest_tag=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+  latest_tag=$(resolve_latest_tag)
   
   # Get commits since last tag (or all commits if no tag)
   local commits
@@ -111,8 +134,11 @@ fi
 
 # ── Calculate next version ───────────────────────────────
 
-# Get latest tag, default to v0.0.0
-LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+# Get latest tag (with unreachable-tag fallback)
+LATEST_TAG=$(resolve_latest_tag)
+if [[ -z "$LATEST_TAG" ]]; then
+  LATEST_TAG="v0.0.0"
+fi
 CURRENT_VERSION="${LATEST_TAG#v}"
 
 IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
@@ -176,8 +202,14 @@ if [[ ! -f CHANGELOG.md ]]; then
 fi
 
 # Collect commits since last tag
+# If the tag is not reachable from HEAD (disconnected history), list all
+# commits instead so the changelog is not empty.
 if [[ -n "$LATEST_TAG" ]]; then
-  COMMITS=$(git log "${LATEST_TAG}..HEAD" --pretty=format:"%s|%h" 2>/dev/null)
+  COMMITS=$(git log "${LATEST_TAG}..HEAD" --pretty=format:"%s|%h" 2>/dev/null || echo "")
+  if [[ -z "$COMMITS" ]]; then
+    warn "Tag ${LATEST_TAG} is not reachable from HEAD — listing all commits"
+    COMMITS=$(git log --pretty=format:"%s|%h" 2>/dev/null)
+  fi
 else
   COMMITS=$(git log --pretty=format:"%s|%h" 2>/dev/null)
 fi
@@ -220,7 +252,7 @@ $(echo -e "$NEW_ENTRIES")
 EOF
 
 # Append existing changelog after first version header
-awk '/^## \[0\./{found=1} found{print}' CHANGELOG.md >> "$TEMP_FILE"
+awk '/^## \[v[0-9]/{found=1} found{print}' CHANGELOG.md >> "$TEMP_FILE"
 
 # Replace CHANGELOG.md
 mv "$TEMP_FILE" CHANGELOG.md
@@ -240,13 +272,29 @@ info "Created tag ${NEXT_VERSION}"
 git push origin "$BRANCH" "$NEXT_VERSION"
 info "Pushed to origin"
 
+# Push to upstream if it exists and differs from origin
+if git remote get-url upstream &>/dev/null; then
+  git push upstream "$BRANCH" "$NEXT_VERSION"
+  info "Pushed to upstream"
+fi
+
 # ── GitHub Release ───────────────────────────────────────
 
 # Extract release notes from CHANGELOG.md (content between version header and next header)
 NOTES=$(awk "/^## \[${NEXT_VERSION}\]/{found=1; next} /^## \[/{if(found) exit} found{print}" CHANGELOG.md)
 
 if command -v gh &> /dev/null; then
+  # Determine the correct GitHub repo for gh CLI
+  # Prefer upstream if it exists (canonical repo), else use origin
+  GH_REPO=""
+  if git remote get-url upstream &>/dev/null; then
+    GH_REPO=$(git remote get-url upstream | sed 's|.*github.com[:/]||; s|\.git$||')
+  else
+    GH_REPO=$(git remote get-url origin | sed 's|.*github.com[:/]||; s|\.git$||')
+  fi
+
   echo "$NOTES" | gh release create "$NEXT_VERSION" \
+    --repo "$GH_REPO" \
     --title "$NEXT_VERSION" \
     --notes-file - \
     --verify-tag
