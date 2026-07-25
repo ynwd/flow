@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 
 - Nothing yet.
 
-## [v0.1.0] - 2026-07-25
+## [0.0.1] - 2026-07-25
 
 - simplify CHANGELOG update to use temp file approach (f97ed3c)
 - simplify CHANGELOG update logic in release script (bf03b7d)
