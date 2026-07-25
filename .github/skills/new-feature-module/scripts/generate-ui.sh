@@ -105,8 +105,11 @@ cat > "${OUTDIR}/shell.html.tmpl" << 'SHELL'
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <title>{{.Title}}</title>
-  <link rel="stylesheet" href="/static/css/app.min.css">
+  <link rel="stylesheet" href="/static/css/app.min.css{{.CacheBust}}">
   {{if .Description}}<meta name="description" content="{{.Description}}">{{end}}
   <link rel="preload" href="/static/vendor/react.production.min.js" as="script" crossorigin>
   <link rel="preload" href="/static/vendor/react-dom.production.min.js" as="script" crossorigin>
@@ -124,7 +127,7 @@ cat > "${OUTDIR}/shell.html.tmpl" << 'SHELL'
   {{end}}
   <script src="/static/vendor/react.production.min.js"></script>
   <script src="/static/vendor/react-dom.production.min.js"></script>
-  <script type="module" src="/static/__FEATURE__/dist/__FEATURE__.tsx.js"></script>
+  <script type="module" src="/static/__FEATURE__/dist/__FEATURE__.tsx.js{{.CacheBust}}"></script>
   <script>window.__MODULE_LOADED__=true;</script>
 </body>
 </html>
@@ -139,8 +142,11 @@ cat > "${OUTDIR}/templates/detail.html.tmpl" << 'DETAIL'
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <title>{{.Title}}</title>
-  <link rel="stylesheet" href="/static/css/app.min.css">
+  <link rel="stylesheet" href="/static/css/app.min.css{{.CacheBust}}">
   {{if .Description}}<meta name="description" content="{{.Description}}">{{end}}
   <link rel="preload" href="/static/vendor/react.production.min.js" as="script" crossorigin>
   <link rel="preload" href="/static/vendor/react-dom.production.min.js" as="script" crossorigin>
@@ -159,7 +165,7 @@ cat > "${OUTDIR}/templates/detail.html.tmpl" << 'DETAIL'
   {{end}}
   <script src="/static/vendor/react.production.min.js"></script>
   <script src="/static/vendor/react-dom.production.min.js"></script>
-  <script type="module" src="/static/__FEATURE__/dist/__FEATURE__.tsx.js"></script>
+  <script type="module" src="/static/__FEATURE__/dist/__FEATURE__.tsx.js{{.CacheBust}}"></script>
   <script>window.__MODULE_LOADED__=true;</script>
 </body>
 </html>

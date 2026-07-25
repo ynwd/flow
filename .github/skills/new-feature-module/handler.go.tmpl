@@ -5,8 +5,11 @@ import (
 	"embed"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
+	"os"
 	"strconv"
+	"time"
 
 	"github.com/ynwd/flow/core/templates"
 )
@@ -34,10 +37,17 @@ func NewHandler(service ServiceInterface) *Handler {
 
 // GET /__FEATURE__ — HTML page (SSR-ready, graceful fallback to CSR)
 func (h *Handler) Page(w http.ResponseWriter, r *http.Request) {
+	// Cache-busting: use timestamp in dev, empty in production
+	cacheBust := ""
+	if os.Getenv("APP_ENV") == "development" {
+		cacheBust = fmt.Sprintf("?v=%d", time.Now().UnixMilli())
+	}
+
 	items, err := h.service.List(r.Context(), 50, 0)
 	tmplData := map[string]interface{}{
-		"Title":    "__FEATURE_TITLE__",
-		"PageType": "list",
+		"Title":     "__FEATURE_TITLE__",
+		"PageType":  "list",
+		"CacheBust": cacheBust,
 	}
 	if err == nil {
 		templates.RenderSSR(w, templatesFS, "templates/shell.html", "templates/skeleton-list.html", tmplData, items)
@@ -49,6 +59,12 @@ func (h *Handler) Page(w http.ResponseWriter, r *http.Request) {
 
 // GET /__FEATURE__/{id} — HTML detail page (SSR-ready, graceful fallback to CSR)
 func (h *Handler) PageDetail(w http.ResponseWriter, r *http.Request) {
+	// Cache-busting: use timestamp in dev, empty in production
+	cacheBust := ""
+	if os.Getenv("APP_ENV") == "development" {
+		cacheBust = fmt.Sprintf("?v=%d", time.Now().UnixMilli())
+	}
+
 	id := r.PathValue("id")
 	if id == "" {
 		http.Error(w, "id is required", http.StatusBadRequest)
@@ -58,14 +74,16 @@ func (h *Handler) PageDetail(w http.ResponseWriter, r *http.Request) {
 	item, err := h.service.GetByID(r.Context(), id)
 	if err == nil {
 		tmplData := map[string]interface{}{
-			"Title":    item.Title + " — __FEATURE_TITLE__",
-			"PageType": "detail",
+			"Title":     item.Title + " — __FEATURE_TITLE__",
+			"PageType":  "detail",
+			"CacheBust": cacheBust,
 		}
 		templates.RenderSSR(w, templatesFS, "templates/detail.html", "templates/skeleton-detail.html", tmplData, item)
 	} else {
 		tmplData := map[string]interface{}{
 			"Title":       "__FEATURE_TITLE__ — Not Found",
 			"PageType":    "detail",
+			"CacheBust":   cacheBust,
 			"ErrorMessage": "Post not found.",
 		}
 		templates.RenderEmpty(w, templatesFS, "templates/detail.html", tmplData)

@@ -10,6 +10,10 @@
 *.out
 /vendor/
 
+# Air (live reload)
+.air.toml
+tmp/
+
 # Node
 node_modules/
 npm-debug.log*

@@ -1,4 +1,4 @@
-.PHONY: init scaffold run css rebuild test test-go test-fe lint lint-go lint-fe vet clean reset-tasks help
+.PHONY: init scaffold run dev css rebuild test test-go test-fe lint lint-go lint-fe vet clean reset-tasks help
 
 # ─── Init ───────────────────────────────────────────────
 init:          ## Init core project from templates
@@ -19,6 +19,28 @@ run:           ## Build all & restart Go server
 		fi; \
 	done
 	@go run . &
+
+dev:           ## Live reload: auto-rebuild CSS, frontend, and restart Go on changes
+	@fuser -k 3000/tcp 2>/dev/null || true
+	@echo "── Starting live-reload dev server ──"
+	@npm run build:css 2>&1 | tail -1
+	@for dir in modules/*/; do \
+		if [ -f "$$dir/package.json" ] && grep -q '"build"' "$$dir/package.json" 2>/dev/null; then \
+			echo "→ Building $$(basename $$dir)..."; \
+			npm run build -w "$${dir%/}" 2>&1 | tail -1; \
+		fi; \
+	done
+	@echo "→ Starting CSS watcher..."
+	@npm run watch:css &
+	@echo "→ Starting frontend watchers..."
+	@for dir in modules/*/; do \
+		if [ -f "$$dir/package.json" ] && grep -q '"watch"' "$$dir/package.json" 2>/dev/null; then \
+			echo "→ Watching $$(basename $$dir)..."; \
+			npm run watch -w "$${dir%/}" & \
+		fi; \
+	done
+	@echo "→ Starting Go live-reload (air)..."
+	@APP_ENV=development air
 
 css:           ## Build Tailwind CSS
 	npm run build:css
