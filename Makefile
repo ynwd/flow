@@ -2,7 +2,7 @@
 
 # ─── Init ───────────────────────────────────────────────
 init:          ## Init core project from templates
-	.github/skills/init-core-project/scripts/init-core.sh
+	.github/skills/init-core-project/scripts/init-core.sh --force
 
 # ─── Scaffold ────────────────────────────────────────────
 scaffold:      ## Scaffold a new feature module: make scaffold name=blog [layers="h s r m p f"] [ssr=--ssr]
