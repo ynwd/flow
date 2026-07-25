@@ -1,4 +1,4 @@
-.PHONY: init scaffold run dev css rebuild test test-go test-fe lint lint-go lint-fe vet clean reset-tasks help
+.PHONY: init scaffold run dev css rebuild test test-go test-fe lint lint-go lint-fe vet clean reset-tasks sync sync-pull sync-status help
 
 # ─── Init ───────────────────────────────────────────────
 init:          ## Init core project from templates
@@ -81,6 +81,16 @@ clean:         ## Remove all generated files (core, modules, node_modules)
 
 reset-tasks:   ## Reset task queue & checkpoint
 	.copilot/skills/reset-tasks/scripts/reset-tasks.sh
+
+# ─── Sync Submodule ─────────────────────────────────────
+sync:          ## Push .copilot/ changes to upstream
+	@.copilot/skills/sync-copilot/scripts/sync-copilot.sh
+
+sync-pull:     ## Pull latest from upstream .copilot/
+	@.copilot/skills/sync-copilot/scripts/sync-copilot.sh --pull
+
+sync-status:   ## Show sync status between local and upstream
+	@.copilot/skills/sync-copilot/scripts/sync-copilot.sh --status
 
 # ─── Help ────────────────────────────────────────────────
 help:          ## Show this help
