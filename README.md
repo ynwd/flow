@@ -153,6 +153,36 @@ User Request → @orchestrator → @analyst → @implementer → @reviewer → D
 | **@implementer** | Writes code (Go backend or React frontend) |
 | **@reviewer** | Reviews code against architecture rules |
 
+### Shared Config (`.copilot/` submodule)
+
+Flow uses a **shared configuration submodule** at `.copilot/` — sourced from [gatralaya/copilot](https://github.com/gatralaya/copilot). This provides a single source of truth for agent definitions, skills, prompts, and instructions across multiple repos.
+
+```text
+.copilot/                    # Shared config (submodule)
+├── agents/                  # Agent definitions (.agent.md)
+├── instructions/            # Architecture, orchestration, workflow docs
+├── prompts/                 # Reusable prompt templates (.prompt.md)
+├── skills/                  # Executable skills with SKILL.md + scripts + templates
+├── copilot-instructions.md  # Entry point for all agent interactions
+├── guardrails.md            # Security, operational, and architecture rules
+├── architecture.md          # Complete project structure diagram
+├── ISSUE_TEMPLATE/          # GitHub issue templates
+├── PULL_REQUEST_TEMPLATE.md # PR checklist
+├── specs/                   # Feature specification templates
+└── tasks/                   # Task queue templates
+
+.github/                     # Repo-specific state
+├── workflows/               # CI/CD (ci.yml, release.yml)
+├── tasks/                   # Live task queue, checkpoints, done/blocked
+├── specs/                   # Feature specifications (written during dev)
+└── copilot-instructions.md  # Thin wrapper → .copilot/copilot-instructions.md
+```
+
+| What | Location | Purpose |
+|---|---|---|
+| **Shared config** (skills, agents, prompts, instructions) | `.copilot/` | Single source of truth, shared across repos |
+| **Repo-specific state** (tasks, specs, CI/CD) | `.github/` | Mutable, lives only in this repo |
+
 ### Self-Registration Pattern
 
 Modules register themselves automatically:
@@ -247,7 +277,8 @@ router.Route{
 
 | Document | Description |
 |---|---|
-| [Architecture](.github/architecture.md) | Complete project structure and conventions |
+| [Architecture](.copilot/architecture.md) | Complete project structure and conventions |
+| [Guardrails](.copilot/guardrails.md) | Security, operational, and architecture rules |
 | [Contributing](CONTRIBUTING.md) | How to contribute to Flow |
 | [Security](SECURITY.md) | Security policy and vulnerability reporting |
 | [Changelog](CHANGELOG.md) | Version history and updates |
