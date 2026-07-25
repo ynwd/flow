@@ -29,11 +29,15 @@ if [[ ! -d "$TEMPLATES_DIR" ]]; then
   exit 1
 fi
 
-# Parse --force flag
+# Parse flags
 FORCE=false
-if [[ "${1:-}" == "--force" ]]; then
-  FORCE=true
-fi
+SKIP_POST=false
+for arg in "$@"; do
+  case $arg in
+    --force) FORCE=true ;;
+    --skip-post) SKIP_POST=true ;;
+  esac
+done
 
 if [[ ! -f "$STATE_FILE" ]]; then
   if $FORCE; then
@@ -132,7 +136,7 @@ done < <(find "$TEMPLATES_DIR" -name '*.tmpl' -print0)
 echo ""
 
 # ── Post-init tasks ──────────────────────────────────────────────
-if [[ "$CREATED" -gt 0 ]]; then
+if [[ "$CREATED" -gt 0 ]] && [[ "$SKIP_POST" == false ]]; then
   echo "── Post-init ──"
 
   cd "$REPO_ROOT"

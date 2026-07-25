@@ -13,8 +13,8 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - name: Init core (generate go.mod, go.sum)
-        run: bash .github/skills/init-core-project/scripts/init-core.sh --force
+      - name: Init core (generate files only, skip build)
+        run: bash .github/skills/init-core-project/scripts/init-core.sh --force --skip-post
 
       - uses: actions/setup-go@v7
         with:
@@ -67,8 +67,8 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Init core
-        run: bash .github/skills/init-core-project/scripts/init-core.sh --force
+      - name: Init core (generate files only, skip build)
+        run: bash .github/skills/init-core-project/scripts/init-core.sh --force --skip-post
 
       - name: Install dependencies
         run: npm install

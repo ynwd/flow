@@ -51,12 +51,14 @@ body{opacity:0;animation:fadeIn .35s ease .1s forwards}
 function toggleTheme(){var e=document.documentElement;e.classList.toggle("light");document.documentElement.classList.toggle("dark");var n=e.classList.contains("light")?"light":"dark";localStorage.setItem("theme",n);var s=document.getElementById("i-sun"),m=document.getElementById("i-moon");if(s&&m){if(n==="light"){s.style.display="block";m.style.display="none"}else{s.style.display="none";m.style.display="block"}}}
 </script>
 </head>
-<body class="min-h-dvh flex flex-col bg-bg-primary text-text-primary">
+<body class="h-dvh flex flex-col bg-bg-primary text-text-primary">
 
 <div class="bg-glow" aria-hidden="true"></div>
 <div class="bg-grid" aria-hidden="true"></div>
 <div class="bg-orb bg-orb-1" aria-hidden="true"></div>
 <div class="bg-orb bg-orb-2" aria-hidden="true"></div>
+
+<div id="index-root" class="flex-1 flex flex-col min-h-0">
 
 <header class="sticky top-0 z-20 flex items-center justify-between h-12 sm:h-14 px-4 sm:px-8 bg-bg-primary/75 backdrop-blur-lg">
   <a href="/" class="flex items-center gap-2.5 no-underline">
@@ -70,7 +72,7 @@ function toggleTheme(){var e=document.documentElement;e.classList.toggle("light"
   </button>
 </header>
 
-<main class="relative z-10 flex-1 flex flex-col items-center justify-center px-5 py-8 sm:py-12 lg:py-16">
+<main class="relative z-10 flex-1 flex flex-col items-center justify-center px-5 py-8 sm:py-12 lg:py-16 min-h-0">
   <div class="w-full max-w-sm md:max-w-md flex flex-col items-center">
 
     <!-- Hero -->
@@ -138,7 +140,7 @@ function toggleTheme(){var e=document.documentElement;e.classList.toggle("light"
   </div>
 </main>
 
-<footer class="relative z-10 flex items-center justify-between h-12 sm:h-14 px-4 sm:px-8">
+<footer class="relative z-10 flex flex-col items-center gap-3 py-6 px-4 sm:flex-row sm:justify-between sm:items-center sm:h-14 sm:py-0 sm:px-8">
   <span class="text-xs text-text-tertiary/60">&copy; {{.Year}} Flow</span>
   <div class="flex items-center gap-5">
     <a href="https://go.dev" target="_blank" class="text-xs text-text-tertiary/60 no-underline transition-colors hover:text-text-primary">Go</a>
@@ -146,6 +148,8 @@ function toggleTheme(){var e=document.documentElement;e.classList.toggle("light"
     <a href="https://tailwindcss.com" target="_blank" class="text-xs text-text-tertiary/60 no-underline transition-colors hover:text-text-primary">Tailwind</a>
   </div>
 </footer>
+
+</div>
 
 </body>
 </html>
