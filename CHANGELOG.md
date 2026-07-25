@@ -6,6 +6,11 @@ All notable changes to this project will be documented in this file.
 
 - Nothing yet.
 
+## [v0.1.3] - 2026-07-25
+
+- remove unused configuration files and update Makefile paths to .copilot ([1dadf41](https://github.com/ynwd/flow/commit/1dadf41))
+- update .copilot submodule — remove unused hash field ([ad0c861](https://github.com/ynwd/flow/commit/ad0c861))
+- sync .copilot submodule — use .copilot/skills/ paths, protect Makefile in clean-root ([477cdfa](https://github.com/ynwd/flow/commit/477cdfa))
 ## [v0.1.2] - 2026-07-25
 
 - update init-core.sh path to .copilot/ and add submodules: recursive to checkout ([8368433](https://github.com/ynwd/flow/commit/8368433))
