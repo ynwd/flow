@@ -91,7 +91,7 @@ User Request → @orchestrator → @analyst → @implementer → @reviewer → D
 
 ### Shared Config (`.copilot/` submodule)
 
-Source: [gatralaya/copilot](https://github.com/gatralaya/copilot)
+Source: [gatralaya/copilot](https://github.com/gatralaya/copilot) — see [`.copilot/README.md`](.copilot/README.md) for full docs.
 
 | Location | Contents | Purpose |
 |---|---|---|
@@ -110,6 +110,9 @@ Source: [gatralaya/copilot](https://github.com/gatralaya/copilot)
 | `make test` | Go tests + Vitest |
 | `make lint` | golangci-lint + ESLint |
 | `make clean` | Remove generated files |
+| `make sync` | Push `.copilot/` changes to upstream |
+| `make sync-pull` | Pull latest from upstream `.copilot/` |
+| `make sync-status` | Check sync status |
 
 ---
 
