@@ -6,6 +6,12 @@ All notable changes to this project will be documented in this file.
 
 - Nothing yet.
 
+## [v0.1.5] - 2026-07-26
+
+- compact README — SEO & AI friendly, 126 lines ([daa293d](https://github.com/ynwd/flow/commit/daa293d))
+- update README — add sync commands and link to .copilot/README.md ([af8a8d6](https://github.com/ynwd/flow/commit/af8a8d6))
+- update .copilot submodule (53c16f5) ([34a7881](https://github.com/ynwd/flow/commit/34a7881))
+- update .copilot submodule (add README) ([242f521](https://github.com/ynwd/flow/commit/242f521))
 ## [v0.1.4] - 2026-07-26
 
 - add sync submodule commands to Makefile ([2a98033](https://github.com/ynwd/flow/commit/2a98033))
